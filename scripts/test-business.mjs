@@ -31,10 +31,13 @@ rejects(()=>run(manager,{action:'review',expenseId:e.id,status:'approved'}),/ins
 rejects(()=>mutate(state,employee,{action:'submit',businessId:other.id}),/do not have access/);
 const view=visibleState(state,employee);assert.equal(view.businesses.length,1);assert.ok(view.businesses[0].expenses.every(e=>e.submittedBy===employee));assert.equal(view.businesses[0].ledger.length,0);checks++;
 rejects(()=>run(employee,{action:'member',email:'new@example.com',name:'New',role:'admin'}),/Only the business admin/);
+run(owner,{action:'member',email:employee,name:'Employee',role:'employee',walletLimit:130000});assert.equal(b.members.find(m=>m.email===employee).walletLimit,130000);checks++;
+rejects(()=>run(employee,{action:'submit',merchant:'Over limit',description:'Work',amount:25001,category:b.categories[0],date:'2026-01-01'}),/remaining team wallet allowance/);
+rejects(()=>run(owner,{action:'member',email:employee,name:'Employee',role:'employee',walletLimit:1000}),/below this member/);
 rejects(()=>run(owner,{action:'submit',amount:-5}),/category/);
 rejects(()=>run(employee,{action:'submit',merchant:'Bad amount',description:'Work',amount:1.5,category:b.categories[0],date:'2026-01-01'}),/positive amount/);
 run(owner,{action:'suspend'});rejects(()=>run(employee,{action:'submit'}),/suspended/);run(owner,{action:'suspend'});
 rejects(()=>run(owner,{action:'member',email:owner,name:'Owner',role:'employee'}),/own admin access/);
 const before=state.businesses.length;run(owner,{action:'createBusiness',name:'Clean company',currency:'KES',adminEmail:owner});assert.equal(state.businesses.length,before+1);assert.equal(state.businesses.at(-1).expenses.length,0);checks++;
 assert.ok(b.audit.some(a=>a.action.startsWith('Approved')));checks++;
-console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, duplicate protection, validation, suspension and audit.`);
+console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension and audit.`);

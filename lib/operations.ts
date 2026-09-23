@@ -1,8 +1,9 @@
-import { balance, newBusiness, type State, type Role } from './model';
+import { balance, memberPending, memberRemaining, memberSpend, newBusiness, type State, type Role } from './model';
 export class RequestError extends Error { constructor(message: string, public status = 400) { super(message); } }
 const required = (value: unknown, label: string, max=160) => {if(typeof value !== 'string' || !value.trim() || value.trim().length>max) throw new RequestError(`Enter a valid ${label}.`);return value.trim();};
 const emailValue = (value: unknown) => {const email=required(value,'email').toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new RequestError('Enter a valid email address.');return email;};
 const amountValue = (value: unknown) => {if(typeof value!=='number'||!Number.isSafeInteger(value)||value<=0||value>100000000000)throw new RequestError('Enter a positive amount with at most two decimal places.');return value;};
+const optionalLimit = (value: unknown) => value === undefined || value === null || value === '' ? undefined : amountValue(value);
 export function mutate(state: State, email: string, input: Record<string,unknown>) {
   const platform = state.owner === email;
   const action = input.action;
@@ -29,7 +30,9 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(!b.categories.includes(category))throw new RequestError('Choose an existing category.');
       const date=required(input.date,'date');
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date||date>new Date().toISOString().slice(0,10))throw new RequestError('Enter a valid date that is not in the future.');
-      b.expenses.unshift({id:crypto.randomUUID(),merchant:required(input.merchant,'merchant'),description:required(input.description,'business purpose',500),amount:amountValue(input.amount),category,date,submittedBy:email,status:'pending'});
+      const amount=amountValue(input.amount),remaining=memberRemaining(b,email);
+      if(remaining!==null&&amount>remaining)throw new RequestError('This expense is above your remaining team wallet allowance.');
+      b.expenses.unshift({id:crypto.randomUUID(),merchant:required(input.merchant,'merchant'),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
     } else if(action==='review') {
       if(role==='employee')throw new RequestError('A manager or business admin must review expenses.',403);
       const expense=b.expenses.find(e=>e.id===input.expenseId);
@@ -57,11 +60,12 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const memberEmail=emailValue(input.email), memberRole=required(input.role,'role') as Role;
       if(!['admin','manager','employee'].includes(memberRole))throw new RequestError('Invalid role.');
       if(memberEmail===email&&memberRole!=='admin')throw new RequestError('You cannot remove your own admin access.');
-      const name=required(input.name,'team member name',80), existing=b.members.find(m=>m.email===memberEmail);
-      if(existing){existing.name=name;existing.role=memberRole;}else b.members.push({email:memberEmail,name,role:memberRole});
+      const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit), existing=b.members.find(m=>m.email===memberEmail);
+      if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this member’s approved and pending spend.');
+      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit});
     } else throw new RequestError('Unknown action.');
   }
-  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Set ${input.email} as ${input.role}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
+  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Set ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
   b.audit.unshift({id:crypto.randomUUID(),actor:email,action:labels[String(action)],date:new Date().toISOString()});
 }
 export function visibleState(state: State, email: string) {

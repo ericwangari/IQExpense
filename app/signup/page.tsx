@@ -1,0 +1,6 @@
+import { ArrowRight, Building2, CircleDollarSign, ShieldCheck, Users } from 'lucide-react';
+import { chatGPTSignInPath } from '../chatgpt-auth';
+
+export default function Signup(){
+ return <main className="auth-shell"><section className="auth-card signup-card"><div className="auth-brand"><span className="brandmark"><Building2 size={22}/></span><span>Expense<span>IQ</span></span></div><p className="eyebrow">CREATE YOUR PLATFORM</p><h1>Start with an admin account, then invite managers and teams</h1><p className="auth-copy">The first signed-in user becomes the platform admin for this private deployment. From there, create businesses, add managers, assign virtual wallet limits, and route expenses for approval.</p><div className="signup-steps"><div><ShieldCheck size={20}/><span>1</span><strong>Create platform admin</strong><p>Own the SaaS control dashboard.</p></div><div><Users size={20}/><span>2</span><strong>Add managers</strong><p>Managers receive pending approval alerts.</p></div><div><CircleDollarSign size={20}/><span>3</span><strong>Assign wallet limits</strong><p>Each team member gets a controlled allowance.</p></div></div><div className="auth-actions"><a className="primary" href={chatGPTSignInPath('/platform')}>Create admin account <ArrowRight size={17}/></a><a className="secondary" href="/login">I already have access</a></div></section></main>;
+}

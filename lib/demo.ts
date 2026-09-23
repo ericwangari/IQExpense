@@ -2,7 +2,8 @@ import { newBusiness, type State } from './model';
 export function initialState(email: string): State {
   const b = newBusiness('Acacia Studio', 'KES', email);
   b.demo = true;
-  b.members.push({email:'amina@example.com',name:'Amina Hassan',role:'manager'}, {email:'david@example.com',name:'David Kimani',role:'employee'}, {email:'sarah@example.com',name:'Sarah Wanjiku',role:'employee'});
+  b.members[0].walletLimit = 25000000;
+  b.members.push({email:'amina@example.com',name:'Amina Hassan',role:'manager',walletLimit:18000000}, {email:'david@example.com',name:'David Kimani',role:'employee',walletLimit:8500000}, {email:'sarah@example.com',name:'Sarah Wanjiku',role:'employee',walletLimit:12000000});
   const now = new Date();
   const date = (days: number) => {const d = new Date(now); d.setDate(d.getDate()-days); return d.toISOString().slice(0,10)};
   b.ledger.push({id:'initial', amount:50000000,note:'Sample company budget',actor:email,date:date(28)});
