@@ -34,6 +34,11 @@ rejects(()=>run(employee,{action:'member',email:'new@example.com',name:'New',rol
 run(owner,{action:'member',email:employee,name:'Employee',role:'employee',walletLimit:130000});assert.equal(b.members.find(m=>m.email===employee).walletLimit,130000);checks++;
 rejects(()=>run(employee,{action:'submit',merchant:'Over limit',description:'Work',amount:25001,category:b.categories[0],date:'2026-01-01'}),/remaining team wallet allowance/);
 rejects(()=>run(owner,{action:'member',email:employee,name:'Employee',role:'employee',walletLimit:1000}),/below this member/);
+run(owner,{action:'member',email:'invited@example.com',name:'Invited User',role:'employee',accountStatus:'invited',walletLimit:50000});assert.equal(b.members.find(m=>m.email==='invited@example.com').accountStatus,'invited');checks++;
+mutate(state,'invited@example.com',{businessId:b.id,action:'submit',merchant:'Activation',description:'First login expense',amount:1000,category:b.categories[0],date:'2026-01-01'});assert.equal(b.members.find(m=>m.email==='invited@example.com').accountStatus,'active');checks++;
+run(owner,{action:'member',email:'disabled@example.com',name:'Disabled User',role:'employee',accountStatus:'disabled'});
+rejects(()=>mutate(state,'disabled@example.com',{businessId:b.id,action:'submit',merchant:'Blocked',description:'No access',amount:1000,category:b.categories[0],date:'2026-01-01'}),/disabled/);
+assert.equal(visibleState(state,'disabled@example.com').businesses.length,0);checks++;
 rejects(()=>run(owner,{action:'submit',amount:-5}),/category/);
 rejects(()=>run(employee,{action:'submit',merchant:'Bad amount',description:'Work',amount:1.5,category:b.categories[0],date:'2026-01-01'}),/positive amount/);
 run(owner,{action:'suspend'});rejects(()=>run(employee,{action:'submit'}),/suspended/);run(owner,{action:'suspend'});

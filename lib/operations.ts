@@ -1,4 +1,4 @@
-import { balance, memberPending, memberRemaining, memberSpend, newBusiness, type State, type Role } from './model';
+import { balance, can, memberPending, memberRemaining, memberSpend, newBusiness, type AccountStatus, type State, type Role } from './model';
 export class RequestError extends Error { constructor(message: string, public status = 400) { super(message); } }
 const required = (value: unknown, label: string, max=160) => {if(typeof value !== 'string' || !value.trim() || value.trim().length>max) throw new RequestError(`Enter a valid ${label}.`);return value.trim();};
 const emailValue = (value: unknown) => {const email=required(value,'email').toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new RequestError('Enter a valid email address.');return email;};
@@ -17,8 +17,11 @@ export function mutate(state: State, email: string, input: Record<string,unknown
   }
   const b=state.businesses.find(b=>b.id===input.businessId);
   if(!b)throw new RequestError('Business not found.',404);
-  const role=b.members.find(m=>m.email===email)?.role;
+  const signedInMember=b.members.find(m=>m.email===email);
+  const role=signedInMember?.role;
   if(!role&&!platform)throw new RequestError('You do not have access to this business.',403);
+  if(signedInMember?.accountStatus==='disabled')throw new RequestError('Your account has been disabled by the business admin.',403);
+  if(signedInMember&&signedInMember.accountStatus!=='active')signedInMember.accountStatus='active';
   if(action==='suspend') {
     if(!platform)throw new RequestError('Only the platform admin can change account status.',403);
     b.suspended=!b.suspended;
@@ -26,6 +29,7 @@ export function mutate(state: State, email: string, input: Record<string,unknown
     if(b.suspended)throw new RequestError('This business is suspended. Contact the platform admin.',403);
     if(!role)throw new RequestError('Business membership is required for this action.',403);
     if(action==='submit') {
+      if(!can(role,'submit_expenses'))throw new RequestError('You do not have permission to submit expenses.',403);
       const category=required(input.category,'category');
       if(!b.categories.includes(category))throw new RequestError('Choose an existing category.');
       const date=required(input.date,'date');
@@ -34,7 +38,7 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(remaining!==null&&amount>remaining)throw new RequestError('This expense is above your remaining team wallet allowance.');
       b.expenses.unshift({id:crypto.randomUUID(),merchant:required(input.merchant,'merchant'),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
     } else if(action==='review') {
-      if(role==='employee')throw new RequestError('A manager or business admin must review expenses.',403);
+      if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);
       const expense=b.expenses.find(e=>e.id===input.expenseId);
       if(!expense)throw new RequestError('Expense not found.',404);
       if(expense.status!=='pending')throw new RequestError('This expense has already been reviewed.',409);
@@ -46,32 +50,35 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       } else expense.reason=required(input.reason,'rejection reason',500);
       expense.status=input.status as 'approved'|'rejected';expense.reviewedBy=email;
     } else if(action==='allocate') {
-      if(role!=='admin')throw new RequestError('Only the business admin can allocate budget.',403);
+      if(!can(role,'manage_wallet'))throw new RequestError('Only the business admin can allocate budget.',403);
       const amount=amountValue(input.amount);
       if(!Number.isSafeInteger(balance(b)+amount)||balance(b)+amount>100000000000)throw new RequestError('Wallet budget limit exceeded.');
       b.ledger.unshift({id:crypto.randomUUID(),amount,note:required(input.note,'allocation reference'),actor:email,date:new Date().toISOString()});
     } else if(action==='category') {
-      if(role!=='admin')throw new RequestError('Only the business admin can manage categories.',403);
+      if(!can(role,'manage_categories'))throw new RequestError('Only the business admin can manage categories.',403);
       const name=required(input.name,'category name',60);
       if(b.categories.some(c=>c.toLowerCase()===name.toLowerCase()))throw new RequestError('This category already exists.');
       b.categories.push(name);
     } else if(action==='member') {
-      if(role!=='admin')throw new RequestError('Only the business admin can manage the team.',403);
+      if(!can(role,'manage_team'))throw new RequestError('Only the business admin can manage the team.',403);
       const memberEmail=emailValue(input.email), memberRole=required(input.role,'role') as Role;
       if(!['admin','manager','employee'].includes(memberRole))throw new RequestError('Invalid role.');
       if(memberEmail===email&&memberRole!=='admin')throw new RequestError('You cannot remove your own admin access.');
+      const accountStatus=(input.accountStatus?required(input.accountStatus,'account status'):'invited') as AccountStatus;
+      if(!['invited','active','disabled'].includes(accountStatus))throw new RequestError('Invalid account status.');
+      if(memberEmail===email&&accountStatus==='disabled')throw new RequestError('You cannot disable your own account.');
       const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit), existing=b.members.find(m=>m.email===memberEmail);
       if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this member’s approved and pending spend.');
-      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit});
+      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus});
     } else throw new RequestError('Unknown action.');
   }
-  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Set ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
+  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
   b.audit.unshift({id:crypto.randomUUID(),actor:email,action:labels[String(action)],date:new Date().toISOString()});
 }
 export function visibleState(state: State, email: string) {
   const platform=state.owner===email;
-  return {email,platform,businesses:state.businesses.filter(b=>platform||b.members.some(m=>m.email===email)).map(b=>{
-    const role=b.members.find(m=>m.email===email)?.role;
+  return {email,platform,businesses:state.businesses.filter(b=>platform||b.members.some(m=>m.email===email&&m.accountStatus!=='disabled')).map(b=>{
+    const role=b.members.find(m=>m.email===email&&m.accountStatus!=='disabled')?.role;
     return role==='employee'?{...b,expenses:b.expenses.filter(e=>e.submittedBy===email),ledger:[],audit:b.audit.filter(e=>e.actor===email),members:b.members.filter(m=>m.email===email)}:b;
   })};
 }

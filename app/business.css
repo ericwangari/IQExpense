@@ -14,3 +14,5 @@
 
 .panel table,.merchant,.category-label,.status,.role-label,.searchbox input,.text-button,.primary,.secondary,.choice,.approval-banner button,.approval-banner strong{font-size:14px}.panel th{font-size:12px}.help-content p,.expense-detail>p{font-size:16px}.stat strong{white-space:normal;overflow-wrap:anywhere}.panel{min-width:0}.app-form label{font-size:14px}
 @media(max-height:850px){.sidebar-note{display:none}.brand{padding-bottom:20px}.workspace-select{margin-bottom:18px}.nav-item{height:38px!important}.platform-caption{margin-top:17px}.profile{padding-top:13px}}
+.status.invited{background:#fff5df;color:#b0832d}.status.disabled{background:#fff0ee;color:#c06a63}.acl-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-bottom:23px}.acl-card{padding:20px}.acl-card h2{margin:14px 0 7px}.acl-card p{color:#7f8da2;font-size:12px;line-height:1.7}
+@media(max-width:1000px){.acl-grid{grid-template-columns:1fr}}

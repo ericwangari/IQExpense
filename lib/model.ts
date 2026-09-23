@@ -1,5 +1,7 @@
 export type Role = 'admin' | 'manager' | 'employee';
-export type Member = { email: string; name: string; role: Role; walletLimit?: number };
+export type AccountStatus = 'invited' | 'active' | 'disabled';
+export type Permission = 'submit_expenses' | 'track_own_expenses' | 'review_expenses' | 'view_company_wallet' | 'manage_wallet' | 'manage_team' | 'manage_categories';
+export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus };
 export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string };
 export type Entry = { id: string; amount: number; note: string; actor: string; date: string; expenseId?: string };
 export type Audit = { id: string; actor: string; action: string; date: string };
@@ -14,6 +16,12 @@ export const memberRemaining = (b: Business, email: string) => {
   const limit = b.members.find(m => m.email === email)?.walletLimit;
   return typeof limit === 'number' ? Math.max(limit - memberSpend(b, email) - memberPending(b, email), 0) : null;
 };
+export const rolePermissions: Record<Role, Permission[]> = {
+  admin: ['submit_expenses', 'track_own_expenses', 'review_expenses', 'view_company_wallet', 'manage_wallet', 'manage_team', 'manage_categories'],
+  manager: ['submit_expenses', 'track_own_expenses', 'review_expenses', 'view_company_wallet'],
+  employee: ['submit_expenses', 'track_own_expenses'],
+};
+export const can = (role: Role | undefined, permission: Permission) => Boolean(role && rolePermissions[role].includes(permission));
 export function newBusiness(name: string, currency: string, email: string): Business {
-  return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000}], categories: [...categories], expenses: [], ledger: [], audit: [] };
+  return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active'}], categories: [...categories], expenses: [], ledger: [], audit: [] };
 }
