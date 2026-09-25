@@ -60,14 +60,16 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(b.categories.some(c=>c.toLowerCase()===name.toLowerCase()))throw new RequestError('This category already exists.');
       b.categories.push(name);
     } else if(action==='member') {
-      if(!can(role,'manage_team'))throw new RequestError('Only the business admin can manage the team.',403);
+      if(!can(role,'manage_team')&&!can(role,'manage_team_members'))throw new RequestError('Only an admin or manager can manage team member accounts.',403);
       const memberEmail=emailValue(input.email), memberRole=required(input.role,'role') as Role;
       if(!['admin','manager','employee'].includes(memberRole))throw new RequestError('Invalid role.');
+      const existing=b.members.find(m=>m.email===memberEmail);
+      if(role==='manager'&&(memberRole!=='employee'||existing?.role!=='employee'&&existing))throw new RequestError('Managers can only manage team member accounts.',403);
       if(memberEmail===email&&memberRole!=='admin')throw new RequestError('You cannot remove your own admin access.');
       const accountStatus=(input.accountStatus?required(input.accountStatus,'account status'):'invited') as AccountStatus;
       if(!['invited','active','disabled'].includes(accountStatus))throw new RequestError('Invalid account status.');
       if(memberEmail===email&&accountStatus==='disabled')throw new RequestError('You cannot disable your own account.');
-      const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit), existing=b.members.find(m=>m.email===memberEmail);
+      const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit);
       if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this member’s approved and pending spend.');
       if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus});
     } else throw new RequestError('Unknown action.');

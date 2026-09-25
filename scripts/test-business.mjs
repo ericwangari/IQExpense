@@ -30,7 +30,11 @@ run(employee,{action:'submit',merchant:'Large purchase',description:'Work',amoun
 rejects(()=>run(manager,{action:'review',expenseId:e.id,status:'approved'}),/insufficient budget/);assert.equal(e.status,'pending');
 rejects(()=>mutate(state,employee,{action:'submit',businessId:other.id}),/do not have access/);
 const view=visibleState(state,employee);assert.equal(view.businesses.length,1);assert.ok(view.businesses[0].expenses.every(e=>e.submittedBy===employee));assert.equal(view.businesses[0].ledger.length,0);checks++;
-rejects(()=>run(employee,{action:'member',email:'new@example.com',name:'New',role:'admin'}),/Only the business admin/);
+rejects(()=>run(employee,{action:'member',email:'new@example.com',name:'New',role:'admin'}),/admin or manager/);
+run(manager,{action:'member',email:'managed@example.com',name:'Managed Member',role:'employee',accountStatus:'invited',walletLimit:40000});assert.equal(b.members.find(m=>m.email==='managed@example.com').walletLimit,40000);checks++;
+run(manager,{action:'member',email:'managed@example.com',name:'Managed Member',role:'employee',accountStatus:'disabled',walletLimit:40000});assert.equal(b.members.find(m=>m.email==='managed@example.com').accountStatus,'disabled');checks++;
+rejects(()=>run(manager,{action:'member',email:'promoted@example.com',name:'Promoted',role:'manager'}),/Managers can only manage team member/);
+rejects(()=>run(manager,{action:'member',email:owner,name:'Owner',role:'employee'}),/Managers can only manage team member/);
 run(owner,{action:'member',email:employee,name:'Employee',role:'employee',walletLimit:130000});assert.equal(b.members.find(m=>m.email===employee).walletLimit,130000);checks++;
 rejects(()=>run(employee,{action:'submit',merchant:'Over limit',description:'Work',amount:25001,category:b.categories[0],date:'2026-01-01'}),/remaining team wallet allowance/);
 rejects(()=>run(owner,{action:'member',email:employee,name:'Employee',role:'employee',walletLimit:1000}),/below this member/);
