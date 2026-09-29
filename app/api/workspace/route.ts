@@ -36,12 +36,16 @@ async function load(email: string) {
   const starter = initialState(email);
   const inserted = await supabase
     .from(TABLE)
-    .upsert({ id: 1, payload: starter, version: 0 }, { onConflict: 'id' })
+    .insert({ id: 1, payload: starter, version: 0 })
     .select('payload, version')
-    .single();
+    .maybeSingle();
 
-  if (inserted.error) throw inserted.error;
-  return { state: inserted.data.payload as State, version: inserted.data.version as number };
+  if (inserted.error && inserted.error.code !== '23505') throw inserted.error;
+  if (inserted.data) return { state: inserted.data.payload as State, version: inserted.data.version as number };
+
+  const existing = await supabase.from(TABLE).select('payload, version').eq('id', 1).single();
+  if (existing.error) throw existing.error;
+  return { state: existing.data.payload as State, version: existing.data.version as number };
 }
 
 function failure(error: unknown) {
