@@ -25,7 +25,15 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 ```
 
-Use the anon key only for the browser. Keep the service role key server-side in Vercel environment variables and never expose it in client code.
+If Supabase shows the newer key names, the app also supports this set:
+
+```env
+SUPABASE_URL=your-supabase-project-url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
+SUPABASE_SECRET_KEY=your-supabase-secret-key
+```
+
+Use the anon or publishable key only for the browser. Keep the service role or secret key server-side in Vercel environment variables and never expose it in client code.
 
 Deploy the GitHub repo to Vercel with the standard Next.js settings:
 
