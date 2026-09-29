@@ -11,6 +11,22 @@ export default function Signup() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  async function signInWithGoogle() {
+    setError('');
+    setMessage('');
+    if (!hasSupabaseBrowserConfig()) {
+      setError('Supabase is not configured yet. Add the Vercel environment variables, then redeploy.');
+      return;
+    }
+    setBusy(true);
+    const { error: oauthError } = await getSupabaseBrowser().auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    setBusy(false);
+    if (oauthError) setError(oauthError.message);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -42,5 +58,5 @@ export default function Signup() {
     setMessage('Account created. Check your email to confirm access, then sign in. Only the first account becomes platform admin; later users must be added by the platform admin or a business admin.');
   }
 
-  return <main className="auth-shell"><section className="auth-card signup-card"><div className="auth-brand"><span className="brandmark"><Building2 size={22}/></span><span>Expense<span>IQ</span></span></div><p className="eyebrow">CREATE ACCOUNT</p><h1>One platform admin controls the SaaS, then adds businesses and teams</h1><p className="auth-copy">Only the first signed-in account becomes the platform admin for this deployment. Every later user can sign in only after the platform admin or a business admin adds their exact email to a business workspace.</p><div className="signup-steps"><div><ShieldCheck size={20}/><span>1</span><strong>First account only</strong><p>Owns the SaaS control dashboard.</p></div><div><Users size={20}/><span>2</span><strong>Add managers</strong><p>Managers receive pending approval alerts.</p></div><div><CircleDollarSign size={20}/><span>3</span><strong>Assign wallet limits</strong><p>Each team member gets a controlled allowance.</p></div></div><form className="app-form auth-form" onSubmit={submit}><label>Full name<input name="name" required autoComplete="name" placeholder="Your name"/></label><label>Email<input name="email" type="email" required autoComplete="email" placeholder="you@company.com"/></label><label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters"/></label>{error?<p className="form-error" role="alert">{error}</p>:null}{message?<p className="success-note" role="status">{message}</p>:null}<button className="primary" disabled={busy} type="submit">{busy?'Creating account…':'Create account'} <ArrowRight size={17}/></button></form><div className="auth-actions"><a className="secondary" href="/login">I already have access</a></div></section></main>;
+  return <main className="auth-shell"><section className="auth-card signup-card"><div className="auth-brand"><span className="brandmark"><Building2 size={22}/></span><span>Expense<span>IQ</span></span></div><p className="eyebrow">CREATE ACCOUNT</p><h1>One platform admin controls the SaaS, then adds businesses and teams</h1><p className="auth-copy">Only the first signed-in account becomes the platform admin for this deployment. Every later user can sign in only after the platform admin or a business admin adds their exact email to a business workspace.</p><div className="signup-steps"><div><ShieldCheck size={20}/><span>1</span><strong>First account only</strong><p>Owns the SaaS control dashboard.</p></div><div><Users size={20}/><span>2</span><strong>Add managers</strong><p>Managers receive pending approval alerts.</p></div><div><CircleDollarSign size={20}/><span>3</span><strong>Assign wallet limits</strong><p>Each team member gets a controlled allowance.</p></div></div><div className="auth-form"><button className="secondary google-button" disabled={busy} type="button" onClick={()=>void signInWithGoogle()}><span className="google-mark">G</span>Continue with Google</button><div className="auth-divider"><span>or create with email</span></div></div><form className="app-form auth-form" onSubmit={submit}><label>Full name<input name="name" required autoComplete="name" placeholder="Your name"/></label><label>Email<input name="email" type="email" required autoComplete="email" placeholder="you@company.com"/></label><label>Password<input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters"/></label>{error?<p className="form-error" role="alert">{error}</p>:null}{message?<p className="success-note" role="status">{message}</p>:null}<button className="primary" disabled={busy} type="submit">{busy?'Creating account…':'Create account'} <ArrowRight size={17}/></button></form><div className="auth-actions"><a className="secondary" href="/login">I already have access</a></div></section></main>;
 }

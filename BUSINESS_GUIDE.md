@@ -45,7 +45,16 @@ After deployment, sign up through `/signup`. The first signed-in user provisions
 
 ## Authentication and access control
 
-Supabase Auth handles signup and login. The browser sends the current Supabase access token to `/api/workspace`, and the server verifies the token with Supabase before returning data or applying a mutation.
+Supabase Auth handles signup and login. Email/password and Google OAuth are supported in the app. The browser sends the current Supabase access token to `/api/workspace`, and the server verifies the token with Supabase before returning data or applying a mutation.
+
+To enable Google sign-in, configure Google in Supabase under Authentication > Sign In / Providers > Google. Add the Google OAuth client ID and client secret, then allow these redirect URLs in Supabase:
+
+```text
+https://iq-expense.vercel.app/**
+https://iq-expense.vercel.app/
+```
+
+If you add a custom domain later, add that domain to the Supabase redirect allow list too. In Google Cloud Console, add the Supabase callback URL shown in the Supabase Google provider settings as an authorized redirect URI.
 
 Role and membership checks still run server-side for every action. Business admins and managers cannot access the platform dashboard unless they are also the platform owner. Team members cannot see company wallet or team management screens. Managers can control team member accounts and approvals. Business admins can manage company-level settings and wallet allocations. Platform admin access is reserved for the one owner account that created the platform state.
 

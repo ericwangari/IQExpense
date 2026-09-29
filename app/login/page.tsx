@@ -17,6 +17,21 @@ export default function Login() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
+  async function signInWithGoogle() {
+    setError('');
+    if (!hasSupabaseBrowserConfig()) {
+      setError('Supabase is not configured yet. Add the Vercel environment variables, then redeploy.');
+      return;
+    }
+    setBusy(true);
+    const { error: oauthError } = await getSupabaseBrowser().auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+    setBusy(false);
+    if (oauthError) setError(oauthError.message);
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError('');
@@ -38,5 +53,5 @@ export default function Login() {
     router.refresh();
   }
 
-  return <main className="auth-shell"><section className="auth-card"><div className="auth-brand"><span className="brandmark"><LockKeyhole size={22}/></span><span>Expense<span>IQ</span></span></div><p className="eyebrow">SECURE SAAS LOGIN</p><h1>Sign in to your expense command center</h1><p className="auth-copy">Use one secure account for platform administration, business management, manager approvals, and team expense submission.</p><form className="app-form auth-form" onSubmit={submit}><label>Email<input name="email" type="email" required autoComplete="email" placeholder="you@company.com"/></label><label>Password<input name="password" type="password" required autoComplete="current-password" placeholder="Your secure password"/></label>{error?<p className="form-error" role="alert">{error}</p>:null}<button className="primary" disabled={busy} type="submit">{busy?'Signing in…':'Login to workspace'} <ArrowRight size={17}/></button></form><div className="auth-actions"><a className="secondary" href="/signup">Create admin account</a></div><div className="auth-grid">{roles.map(({title,text,icon:Icon})=><article key={title}><Icon size={19}/><strong>{title}</strong><p>{text}</p></article>)}</div></section></main>;
+  return <main className="auth-shell"><section className="auth-card"><div className="auth-brand"><span className="brandmark"><LockKeyhole size={22}/></span><span>Expense<span>IQ</span></span></div><p className="eyebrow">SECURE SAAS LOGIN</p><h1>Sign in to your expense command center</h1><p className="auth-copy">Use one secure account for platform administration, business management, manager approvals, and team expense submission.</p><div className="auth-form"><button className="secondary google-button" disabled={busy} type="button" onClick={()=>void signInWithGoogle()}><span className="google-mark">G</span>Continue with Google</button><div className="auth-divider"><span>or use email</span></div></div><form className="app-form auth-form" onSubmit={submit}><label>Email<input name="email" type="email" required autoComplete="email" placeholder="you@company.com"/></label><label>Password<input name="password" type="password" required autoComplete="current-password" placeholder="Your secure password"/></label>{error?<p className="form-error" role="alert">{error}</p>:null}<button className="primary" disabled={busy} type="submit">{busy?'Signing in…':'Login to workspace'} <ArrowRight size={17}/></button></form><div className="auth-actions"><a className="secondary" href="/signup">Create account</a></div><div className="auth-grid">{roles.map(({title,text,icon:Icon})=><article key={title}><Icon size={19}/><strong>{title}</strong><p>{text}</p></article>)}</div></section></main>;
 }
