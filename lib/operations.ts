@@ -7,16 +7,25 @@ const optionalLimit = (value: unknown) => value === undefined || value === null 
 export function mutate(state: State, email: string, input: Record<string,unknown>) {
   const platform = state.owner === email;
   const action = input.action;
-  if(action==='createBusiness') {
-    if(!platform)throw new RequestError('Only the platform admin can create businesses.',403);
+  if(action==='registerBusiness') {
     const currency=required(input.currency,'currency');
     if(!['KES','USD','EUR','GBP','UGX','TZS'].includes(currency))throw new RequestError('Unsupported currency.');
-    const b=newBusiness(required(input.name,'business name',80),currency,emailValue(input.adminEmail));
-    b.audit.push({id:crypto.randomUUID(),actor:email,action:'Created business',date:new Date().toISOString()});
+    if(state.businesses.some(b=>b.members.some(m=>m.email===email)&&b.approvalStatus!=='rejected'))throw new RequestError('You already have a business registration in progress or approved.',409);
+    const b=newBusiness(required(input.name,'business name',80),currency,email,'pending');
+    b.audit.push({id:crypto.randomUUID(),actor:email,action:'Registered business for platform approval',date:new Date().toISOString()});
     state.businesses.push(b);return;
   }
   const b=state.businesses.find(b=>b.id===input.businessId);
   if(!b)throw new RequestError('Business not found.',404);
+  if(action==='reviewBusiness') {
+    if(!platform)throw new RequestError('Only the platform admin can approve registered businesses.',403);
+    const status=required(input.status,'approval decision') as 'approved'|'rejected';
+    if(!['approved','rejected'].includes(status))throw new RequestError('Invalid business approval decision.');
+    b.approvalStatus=status;
+    b.rejectionReason=status==='rejected'?required(input.reason,'rejection reason',500):undefined;
+    b.audit.unshift({id:crypto.randomUUID(),actor:email,action:status==='approved'?'Approved business registration':`Rejected business registration: ${b.rejectionReason}`,date:new Date().toISOString()});
+    return;
+  }
   const signedInMember=b.members.find(m=>m.email===email);
   const role=signedInMember?.role;
   if(!role&&!platform)throw new RequestError('You do not have access to this business.',403);
@@ -26,6 +35,7 @@ export function mutate(state: State, email: string, input: Record<string,unknown
     if(!platform)throw new RequestError('Only the platform admin can change account status.',403);
     b.suspended=!b.suspended;
   } else {
+    if((b.approvalStatus||'approved')!=='approved')throw new RequestError('This business is waiting for platform admin approval.',403);
     if(b.suspended)throw new RequestError('This business is suspended. Contact the platform admin.',403);
     if(!role)throw new RequestError('Business membership is required for this action.',403);
     if(action==='submit') {

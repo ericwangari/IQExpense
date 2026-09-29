@@ -1,11 +1,12 @@
 export type Role = 'admin' | 'manager' | 'employee';
 export type AccountStatus = 'invited' | 'active' | 'disabled';
+export type BusinessStatus = 'pending' | 'approved' | 'rejected';
 export type Permission = 'submit_expenses' | 'track_own_expenses' | 'review_expenses' | 'view_company_wallet' | 'manage_wallet' | 'manage_team' | 'manage_team_members' | 'manage_categories';
 export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus };
 export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string };
 export type Entry = { id: string; amount: number; note: string; actor: string; date: string; expenseId?: string };
 export type Audit = { id: string; actor: string; action: string; date: string };
-export type Business = { id: string; name: string; currency: string; suspended: boolean; demo: boolean; members: Member[]; categories: string[]; expenses: Expense[]; ledger: Entry[]; audit: Audit[] };
+export type Business = { id: string; name: string; currency: string; suspended: boolean; demo: boolean; approvalStatus?: BusinessStatus; rejectionReason?: string; members: Member[]; categories: string[]; expenses: Expense[]; ledger: Entry[]; audit: Audit[] };
 export type State = { owner: string; businesses: Business[] };
 export type View = { email: string; platform: boolean; businesses: Business[] };
 export const categories = ['Travel & transport', 'Software & subscriptions', 'Office & supplies', 'Meals & entertainment', 'Marketing', 'Other'];
@@ -22,6 +23,6 @@ export const rolePermissions: Record<Role, Permission[]> = {
   employee: ['submit_expenses', 'track_own_expenses'],
 };
 export const can = (role: Role | undefined, permission: Permission) => Boolean(role && rolePermissions[role].includes(permission));
-export function newBusiness(name: string, currency: string, email: string): Business {
-  return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active'}], categories: [...categories], expenses: [], ledger: [], audit: [] };
+export function newBusiness(name: string, currency: string, email: string, approvalStatus: BusinessStatus = 'approved'): Business {
+  return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, approvalStatus, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active'}], categories: [...categories], expenses: [], ledger: [], audit: [] };
 }
