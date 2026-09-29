@@ -41,13 +41,13 @@ Deploy the GitHub repo to Vercel with the standard Next.js settings:
 - Build command: `npm run build`
 - Output: Next.js default
 
-After deployment, sign up through `/signup`. The first signed-in user provisions the initial platform workspace and becomes the only platform admin. Later users can create Supabase Auth accounts, but they do not receive platform admin access. Business admins create member access by adding each member's exact Supabase Auth email in the Team area. Those users sign in through `/login` and receive a role-scoped dashboard.
+After deployment, sign up through `/signup`. The first signed-in user provisions the platform owner account and becomes the only platform admin. Production starts with no mock business data. The platform admin opens `/platform`, creates the first real business, and assigns that business's admin email. Later users can create Supabase Auth accounts, but they do not receive platform admin access. Business admins create member access by adding each member's exact Supabase Auth email in the Team area. Those users sign in through `/login` and receive a role-scoped dashboard.
 
 ## Authentication and access control
 
 Supabase Auth handles signup and login. The browser sends the current Supabase access token to `/api/workspace`, and the server verifies the token with Supabase before returning data or applying a mutation.
 
-Role and membership checks still run server-side for every action. Team members cannot see company wallet or team management screens. Managers can control team member accounts and approvals. Business admins can manage company-level settings and wallet allocations. Platform admin access is reserved for the one owner account that created the platform state.
+Role and membership checks still run server-side for every action. Business admins and managers cannot access the platform dashboard unless they are also the platform owner. Team members cannot see company wallet or team management screens. Managers can control team member accounts and approvals. Business admins can manage company-level settings and wallet allocations. Platform admin access is reserved for the one owner account that created the platform state.
 
 ## Persistence and current scale
 

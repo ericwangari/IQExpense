@@ -8,6 +8,15 @@ export const runtime = 'nodejs';
 
 const TABLE = 'expenseiq_workspace';
 
+function removeLegacyDemoWorkspace(state: State) {
+  if (state.businesses.length !== 1) return false;
+  const [business] = state.businesses;
+  const hasOnlySampleExpenses = business.expenses.every((expense) => expense.id.startsWith('sample-'));
+  if (!business.demo || !hasOnlySampleExpenses) return false;
+  state.businesses = [];
+  return true;
+}
+
 function trustedHeaderEmail(request: Request) {
   const id = request.headers.get('oai-authenticated-user-id');
   const email = request.headers.get('oai-authenticated-user-email')?.trim().toLowerCase();
@@ -31,7 +40,13 @@ async function load(email: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase.from(TABLE).select('payload, version').eq('id', 1).maybeSingle();
   if (error) throw error;
-  if (data) return { state: data.payload as State, version: data.version as number };
+  if (data) {
+    const state = data.payload as State;
+    if (removeLegacyDemoWorkspace(state)) {
+      await supabase.from(TABLE).update({ payload: state, updated_at: new Date().toISOString() }).eq('id', 1).eq('version', data.version);
+    }
+    return { state, version: data.version as number };
+  }
 
   const starter = initialState(email);
   const inserted = await supabase
@@ -45,7 +60,11 @@ async function load(email: string) {
 
   const existing = await supabase.from(TABLE).select('payload, version').eq('id', 1).single();
   if (existing.error) throw existing.error;
-  return { state: existing.data.payload as State, version: existing.data.version as number };
+  const state = existing.data.payload as State;
+  if (removeLegacyDemoWorkspace(state)) {
+    await supabase.from(TABLE).update({ payload: state, updated_at: new Date().toISOString() }).eq('id', 1).eq('version', existing.data.version);
+  }
+  return { state, version: existing.data.version as number };
 }
 
 function failure(error: unknown) {

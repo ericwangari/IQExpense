@@ -1,5 +1,9 @@
 import { newBusiness, type State } from './model';
 export function initialState(email: string): State {
+  return {owner:email,businesses:[]};
+}
+
+export function demoState(email: string): State {
   const b = newBusiness('Acacia Studio', 'KES', email);
   b.demo = true;
   b.members[0].walletLimit = 25000000;
