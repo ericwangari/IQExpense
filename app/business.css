@@ -111,3 +111,13 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   .loading .auth-actions .secondary{color:#142033!important;background:#fff!important;border:1px solid #dfe7f2!important;box-shadow:0 16px 34px rgba(15,31,64,.08)!important}
 }
 @media(max-width:390px){.loading{padding-left:18px!important;padding-right:18px!important}.loading h1{font-size:28px!important}.loading .brandmark{margin-top:calc(32svh - 28px)}}
+
+/* Keep mobile splash title fully readable below hero split */
+@media(max-width:767px){
+  .loading{background:linear-gradient(180deg,#07111f 0,#102241 40%,#eef4fb 40%,#eef4fb 100%)!important}
+  .loading .brandmark{margin-top:calc(30svh - 28px)!important;margin-bottom:54px!important}
+  .loading h1{color:#10203a!important;background:transparent!important;mix-blend-mode:normal!important;opacity:1!important;text-shadow:none!important}
+  .loading h1 span{color:#52617a!important;opacity:1!important}
+  .loading p{margin-top:-4px!important;color:#5f6f86!important;opacity:1!important}
+}
+@media(max-width:390px){.loading .brandmark{margin-top:calc(29svh - 28px)!important;margin-bottom:50px!important}}
