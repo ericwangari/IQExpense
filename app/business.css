@@ -195,3 +195,122 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
 @media(display-mode:standalone) and (max-width:390px){
   [data-mobile=true][data-slot=sidebar] > div{padding-top:108px!important}
 }
+
+/* Mobile auth centering and alignment */
+@media(max-width:767px){
+  .premium-auth-shell{
+    min-height:100svh!important;
+    display:flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 18px)!important;
+    background:radial-gradient(circle at 50% 100%,rgba(49,92,246,.22),transparent 36%),linear-gradient(180deg,#07111f 0,#102241 35%,#eef4fb 35%,#eef4fb 100%)!important;
+  }
+  .premium-auth-card{
+    width:min(100%,430px)!important;
+    margin:0 auto!important;
+    border-radius:34px!important;
+    overflow:hidden!important;
+    box-shadow:0 28px 80px rgba(7,17,31,.26)!important;
+  }
+  .premium-auth-card .auth-main{
+    padding:34px 22px 28px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    text-align:center!important;
+  }
+  .premium-auth-card .auth-brand{
+    justify-content:center!important;
+    width:100%!important;
+    margin:0 auto 34px!important;
+    gap:14px!important;
+    font-size:25px!important;
+    line-height:1!important;
+  }
+  .premium-auth-card .brandmark{
+    width:58px!important;
+    height:58px!important;
+    border-radius:18px!important;
+    flex:0 0 auto!important;
+  }
+  .premium-auth-card .eyebrow{
+    width:100%!important;
+    text-align:center!important;
+    letter-spacing:4px!important;
+    font-size:12px!important;
+    line-height:1.6!important;
+    margin:0 0 16px!important;
+  }
+  .premium-auth-card h1{
+    max-width:360px!important;
+    margin:0 auto!important;
+    text-align:center!important;
+    font-size:clamp(30px,8.6vw,42px)!important;
+    line-height:1.12!important;
+    letter-spacing:-1.9px!important;
+  }
+  .premium-auth-card .auth-copy{
+    max-width:350px!important;
+    margin:22px auto 28px!important;
+    text-align:center!important;
+    font-size:16px!important;
+    line-height:1.75!important;
+    color:#66758d!important;
+  }
+  .premium-auth-card .auth-form,
+  .premium-auth-card .auth-actions{
+    width:100%!important;
+    max-width:360px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+  .premium-auth-card .app-form{
+    text-align:left!important;
+  }
+  .premium-auth-card .google-button,
+  .premium-auth-card .primary,
+  .premium-auth-card .auth-actions .secondary{
+    width:100%!important;
+    min-height:58px!important;
+    border-radius:20px!important;
+    justify-content:center!important;
+    font-size:16px!important;
+    font-weight:800!important;
+  }
+  .premium-auth-card .auth-actions{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:0!important;
+    margin-top:4px!important;
+  }
+  .premium-auth-card .auth-divider{
+    width:100%!important;
+    margin:20px 0!important;
+    justify-content:center!important;
+  }
+  .premium-auth-card .auth-divider span{
+    min-width:max-content!important;
+  }
+  .premium-auth-card .app-form label{
+    gap:10px!important;
+    color:#52617a!important;
+    font-size:14px!important;
+    font-weight:800!important;
+  }
+  .premium-auth-card .app-form input{
+    min-height:58px!important;
+    border-radius:18px!important;
+    padding:14px 18px!important;
+    font-size:16px!important;
+    text-align:left!important;
+  }
+}
+@media(max-width:390px){
+  .premium-auth-shell{padding-left:12px!important;padding-right:12px!important}
+  .premium-auth-card .auth-main{padding:30px 18px 24px!important}
+  .premium-auth-card .auth-brand{font-size:23px!important;margin-bottom:28px!important}
+  .premium-auth-card .brandmark{width:54px!important;height:54px!important}
+  .premium-auth-card h1{font-size:30px!important}
+  .premium-auth-card .auth-copy{font-size:15px!important;line-height:1.65!important}
+}
