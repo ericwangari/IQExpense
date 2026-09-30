@@ -155,3 +155,43 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
 @media(max-width:390px){
   [data-mobile=true] [data-slot=sidebar-inner]{padding-top:max(78px,calc(env(safe-area-inset-top) + 44px))!important}
 }
+
+/* Mobile PWA drawer clearance: target the actual sheet wrapper used by the sidebar */
+@media(max-width:767px){
+  [data-mobile=true][data-slot=sidebar]{
+    padding-top:0!important;
+    background:#fff!important;
+    overflow:hidden!important;
+  }
+  [data-mobile=true][data-slot=sidebar] > div{
+    padding-top:92px!important;
+    padding-left:14px!important;
+    padding-right:14px!important;
+    padding-bottom:12px!important;
+    background:#fff!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch!important;
+  }
+  [data-mobile=true] .brand{
+    padding-top:0!important;
+    padding-bottom:30px!important;
+    margin:0!important;
+    min-height:58px!important;
+  }
+  .topbar{
+    padding-top:46px!important;
+    min-height:108px!important;
+    align-items:end!important;
+  }
+}
+@media(display-mode:standalone) and (max-width:767px){
+  [data-mobile=true][data-slot=sidebar] > div{padding-top:102px!important}
+  .topbar{padding-top:54px!important;min-height:116px!important}
+}
+@media(max-width:390px){
+  [data-mobile=true][data-slot=sidebar] > div{padding-top:96px!important}
+  [data-mobile=true] .brand{font-size:22px!important;grid-template-columns:42px minmax(0,1fr)!important}
+}
+@media(display-mode:standalone) and (max-width:390px){
+  [data-mobile=true][data-slot=sidebar] > div{padding-top:108px!important}
+}

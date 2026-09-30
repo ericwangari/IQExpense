@@ -1,4 +1,4 @@
-const CACHE_NAME = "expenseiq-shell-v1";
+const CACHE_NAME = "expenseiq-shell-v2";
 const APP_SHELL = ["/", "/login", "/signup", "/favicon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -29,3 +29,4 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
   );
 });
+
