@@ -121,3 +121,26 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   .loading p{margin-top:-4px!important;color:#5f6f86!important;opacity:1!important}
 }
 @media(max-width:390px){.loading .brandmark{margin-top:calc(29svh - 28px)!important;margin-bottom:50px!important}}
+
+/* iOS installed app safe-area header fixes */
+@media(max-width:767px){
+  body{padding-top:0!important}
+  .topbar{padding-top:calc(env(safe-area-inset-top) + 12px)!important;min-height:calc(66px + env(safe-area-inset-top))!important;align-items:end!important}
+  .main-shell{padding-top:0!important}
+  .content{padding-top:14px!important}
+  [data-mobile=true][data-slot=sidebar]{padding-top:env(safe-area-inset-top)!important}
+  [data-mobile=true] [data-slot=sidebar-inner]{padding-top:calc(env(safe-area-inset-top) + 18px)!important}
+  [data-mobile=true] .brand{padding-top:0!important;margin-top:0!important;grid-template-columns:48px minmax(0,1fr)!important;font-size:26px!important;align-items:center!important}
+  [data-mobile=true] .brand .brandmark{width:46px!important;height:46px!important}
+  [data-mobile=true] .brand small{margin-top:7px!important}
+  .page-heading{margin-top:0!important}
+}
+@media(display-mode:standalone) and (max-width:767px){
+  .topbar{padding-top:calc(env(safe-area-inset-top) + 14px)!important;min-height:calc(70px + env(safe-area-inset-top))!important}
+  [data-mobile=true][data-slot=sidebar]{padding-top:0!important}
+  [data-mobile=true] [data-slot=sidebar-inner]{padding-top:calc(env(safe-area-inset-top) + 22px)!important}
+}
+@media(max-width:390px){
+  [data-mobile=true] .brand{font-size:23px!important;grid-template-columns:44px minmax(0,1fr)!important;gap:10px!important}
+  [data-mobile=true] .brand .brandmark{width:42px!important;height:42px!important}
+}
