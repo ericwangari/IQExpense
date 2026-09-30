@@ -52,7 +52,7 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const expense=b.expenses.find(e=>e.id===input.expenseId);
       if(!expense)throw new RequestError('Expense not found.',404);
       if(expense.status!=='pending')throw new RequestError('This expense has already been reviewed.',409);
-      if(expense.submittedBy===email)throw new RequestError('Another manager must review your own expense.',403);
+      if(role!=='admin'&&expense.submittedBy===email)throw new RequestError('Another manager or business admin must review your own expense.',403);
       if(!['approved','rejected'].includes(String(input.status)))throw new RequestError('Invalid decision.');
       if(input.status==='approved') {
         if(balance(b)<expense.amount)throw new RequestError('The wallet has insufficient budget. Ask your business admin to allocate more.');
