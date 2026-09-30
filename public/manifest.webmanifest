@@ -1,0 +1,34 @@
+{
+  "name": "ExpenseIQ Business",
+  "short_name": "ExpenseIQ",
+  "description": "Premium business expense management with approvals, roles, and internal wallet controls.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open dashboard",
+      "short_name": "Dashboard",
+      "url": "/",
+      "description": "Open your ExpenseIQ workspace"
+    },
+    {
+      "name": "Platform admin",
+      "short_name": "Platform",
+      "url": "/platform",
+      "description": "Open the platform admin area"
+    }
+  ]
+}
