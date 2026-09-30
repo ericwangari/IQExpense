@@ -2,14 +2,25 @@
 
 import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, Building2, LockKeyhole, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  Bell,
+  Building2,
+  CheckCircle2,
+  LockKeyhole,
+  ReceiptText,
+  ShieldCheck,
+  Sparkles,
+  Users,
+  WalletCards,
+} from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 
 const roles = [
-  { title: 'Platform admin', text: 'Control businesses, account status, and system health.', icon: Sparkles },
-  { title: 'Business admin', text: 'Manage company wallets, team limits, and expense policy.', icon: Building2 },
-  { title: 'Manager', text: 'Review pending approvals and keep spending moving.', icon: ShieldCheck },
-  { title: 'Team member', text: 'Submit expenses against a personal virtual wallet.', icon: Users },
+  { title: 'Platform admin', text: 'Approve businesses and monitor the whole SaaS.', icon: Sparkles },
+  { title: 'Business admin', text: 'Control company wallets, teams, and policy.', icon: Building2 },
+  { title: 'Manager', text: 'Approve pending spend requests with clear alerts.', icon: ShieldCheck },
+  { title: 'Team member', text: 'Submit expenses inside assigned permissions.', icon: Users },
 ];
 
 export default function Login() {
@@ -53,5 +64,77 @@ export default function Login() {
     router.refresh();
   }
 
-  return <main className="auth-shell"><section className="auth-card"><div className="auth-brand"><span className="brandmark"><LockKeyhole size={22}/></span><span>Expense<span>IQ</span></span></div><p className="eyebrow">SECURE SAAS LOGIN</p><h1>Sign in to your expense command center</h1><p className="auth-copy">Use one secure account for platform administration, business management, manager approvals, and team expense submission.</p><div className="auth-form"><button className="secondary google-button" disabled={busy} type="button" onClick={()=>void signInWithGoogle()}><span className="google-mark">G</span>Continue with Google</button><div className="auth-divider"><span>or use email</span></div></div><form className="app-form auth-form" onSubmit={submit}><label>Email<input name="email" type="email" required autoComplete="email" placeholder="you@company.com"/></label><label>Password<input name="password" type="password" required autoComplete="current-password" placeholder="Your secure password"/></label>{error?<p className="form-error" role="alert">{error}</p>:null}<button className="primary" disabled={busy} type="submit">{busy?'Signing in…':'Login to workspace'} <ArrowRight size={17}/></button></form><div className="auth-actions"><a className="secondary" href="/signup">Create account</a></div><div className="auth-grid">{roles.map(({title,text,icon:Icon})=><article key={title}><Icon size={19}/><strong>{title}</strong><p>{text}</p></article>)}</div></section></main>;
+  return (
+    <main className="auth-shell premium-auth-shell">
+      <section className="auth-card premium-auth-card">
+        <div className="auth-main">
+          <div className="auth-brand">
+            <span className="brandmark"><LockKeyhole size={22} /></span>
+            <span>Expense<span>IQ</span></span>
+          </div>
+
+          <p className="eyebrow">SECURE EXPENSE OPERATIONS</p>
+          <h1>Premium expense control for every business workspace</h1>
+          <p className="auth-copy">
+            Sign in to approve businesses, manage controlled team wallets, review expenses, and keep every shilling accountable from one polished workspace.
+          </p>
+
+          <div className="auth-form">
+            <button className="secondary google-button" disabled={busy} type="button" onClick={() => void signInWithGoogle()}>
+              <span className="google-mark">G</span>
+              Continue with Google
+            </button>
+            <div className="auth-divider"><span>or use email</span></div>
+          </div>
+
+          <form className="app-form auth-form" onSubmit={submit}>
+            <label>
+              Email
+              <input name="email" type="email" required autoComplete="email" placeholder="you@company.com" />
+            </label>
+            <label>
+              Password
+              <input name="password" type="password" required autoComplete="current-password" placeholder="Your secure password" />
+            </label>
+            {error ? <p className="form-error" role="alert">{error}</p> : null}
+            <button className="primary" disabled={busy} type="submit">
+              {busy ? 'Signing in…' : 'Login to workspace'} <ArrowRight size={17} />
+            </button>
+          </form>
+
+          <div className="auth-actions">
+            <a className="secondary" href="/signup">Create business account</a>
+          </div>
+        </div>
+
+        <aside className="auth-visual" aria-label="ExpenseIQ workspace preview">
+          <div className="auth-visual-top">
+            <span className="live-badge"><span /> Live workspace</span>
+            <strong>Business wallet control</strong>
+          </div>
+          <div className="wallet-preview-card">
+            <div>
+              <span>Available balance</span>
+              <strong>KES 1.24M</strong>
+            </div>
+            <WalletCards size={28} />
+          </div>
+          <div className="preview-list">
+            <div><ReceiptText size={18} /><span>Team transport claim</span><strong>Pending</strong></div>
+            <div><Bell size={18} /><span>3 manager approvals</span><strong>Alert</strong></div>
+            <div><CheckCircle2 size={18} /><span>Policy matched spend</span><strong>Clear</strong></div>
+          </div>
+          <div className="auth-grid premium-role-grid">
+            {roles.map(({ title, text, icon: Icon }) => (
+              <article key={title}>
+                <Icon size={19} />
+                <strong>{title}</strong>
+                <p>{text}</p>
+              </article>
+            ))}
+          </div>
+        </aside>
+      </section>
+    </main>
+  );
 }
