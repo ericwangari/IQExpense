@@ -144,3 +144,14 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   [data-mobile=true] .brand{font-size:23px!important;grid-template-columns:44px minmax(0,1fr)!important;gap:10px!important}
   [data-mobile=true] .brand .brandmark{width:42px!important;height:42px!important}
 }
+
+/* Hard mobile status-bar clearance for installed iOS drawer */
+@media(max-width:767px){
+  [data-mobile=true][data-slot=sidebar]{padding-top:0!important}
+  [data-mobile=true] [data-slot=sidebar-inner]{padding-top:max(76px,calc(env(safe-area-inset-top) + 42px))!important}
+  [data-mobile=true] .brand{padding-bottom:34px!important;margin-top:0!important}
+  .topbar{padding-top:max(32px,calc(env(safe-area-inset-top) + 14px))!important;min-height:max(84px,calc(70px + env(safe-area-inset-top)))!important}
+}
+@media(max-width:390px){
+  [data-mobile=true] [data-slot=sidebar-inner]{padding-top:max(78px,calc(env(safe-area-inset-top) + 44px))!important}
+}
