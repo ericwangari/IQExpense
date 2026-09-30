@@ -1,4 +1,4 @@
-const CACHE_NAME = "expenseiq-shell-v2";
+const CACHE_NAME = "expenseiq-shell-v3";
 const APP_SHELL = ["/", "/login", "/signup", "/favicon.svg", "/manifest.webmanifest"];
 
 self.addEventListener("install", (event) => {
@@ -13,6 +13,10 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") self.skipWaiting();
+});
+
 self.addEventListener("fetch", (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -20,7 +24,7 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET" || url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
-    fetch(request)
+    fetch(request, { cache: "no-store" })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
@@ -29,4 +33,3 @@ self.addEventListener("fetch", (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match("/")))
   );
 });
-
