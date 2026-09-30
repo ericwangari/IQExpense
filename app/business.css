@@ -97,3 +97,17 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   [data-mobile=true] .brand small{letter-spacing:4px!important;font-size:11px!important}
   [data-mobile=true] .workspace-select{padding:14px!important}
 }
+
+/* Mobile splash/login visibility fix */
+@media(max-width:767px){
+  .loading{justify-content:flex-start!important;gap:16px!important;padding:0 22px 28px!important;background:linear-gradient(180deg,#07111f 0,#102241 43%,#eef4fb 43%,#eef4fb 100%)!important;color:#142033!important;text-align:center!important}
+  .loading .brandmark{margin-top:calc(33svh - 28px);width:56px!important;height:56px!important;border-radius:16px!important;box-shadow:0 18px 38px rgba(49,92,246,.28)!important}
+  .loading h1{margin-top:6px!important;padding:0 10px;color:#142033!important;font-size:31px!important;line-height:1.08!important;letter-spacing:-1px!important;text-shadow:none!important;max-width:100%;overflow-wrap:anywhere}
+  .loading h1 span{color:#52617a!important;font-weight:500!important}
+  .loading p{color:#66758d!important;font-size:15px!important;line-height:1.5!important;max-width:330px!important;text-shadow:none!important}
+  .loading .auth-actions{width:100%!important;display:grid!important;grid-template-columns:1fr!important;gap:14px!important;margin-top:8px!important}
+  .loading .auth-actions .primary,.loading .auth-actions .secondary{width:100%!important;min-height:58px!important;border-radius:18px!important;font-size:16px!important;font-weight:800!important}
+  .loading .auth-actions .primary{color:#fff!important;background:linear-gradient(135deg,#315cf6,#113cc9)!important;box-shadow:0 18px 36px rgba(49,92,246,.28)!important}
+  .loading .auth-actions .secondary{color:#142033!important;background:#fff!important;border:1px solid #dfe7f2!important;box-shadow:0 16px 34px rgba(15,31,64,.08)!important}
+}
+@media(max-width:390px){.loading{padding-left:18px!important;padding-right:18px!important}.loading h1{font-size:28px!important}.loading .brandmark{margin-top:calc(32svh - 28px)}}
