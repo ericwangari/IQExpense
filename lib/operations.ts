@@ -4,13 +4,6 @@ const required = (value: unknown, label: string, max=160) => {if(typeof value !=
 const emailValue = (value: unknown) => {const email=required(value,'email').toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new RequestError('Enter a valid email address.');return email;};
 const amountValue = (value: unknown) => {if(typeof value!=='number'||!Number.isSafeInteger(value)||value<=0||value>100000000000)throw new RequestError('Enter a positive amount with at most two decimal places.');return value;};
 const optionalLimit = (value: unknown) => value === undefined || value === null || value === '' ? undefined : amountValue(value);
-const optionalPhone = (value: unknown) => {
-  if (value === undefined || value === null || value === '') return undefined;
-  const phone = required(value, 'phone number', 32).replace(/[\s().-]/g, '');
-  if (!/^\+[1-9]\d{7,14}$/.test(phone)) throw new RequestError('Enter the phone number in international format, for example +254712345678.');
-  return phone;
-};
-const boolValue = (value: unknown) => value === true || value === 'true' || value === 'on' || value === 'yes';
 export function mutate(state: State, email: string, input: Record<string,unknown>) {
   const platform = state.owner === email;
   const action = input.action;
@@ -86,9 +79,9 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const accountStatus=(input.accountStatus?required(input.accountStatus,'account status'):'invited') as AccountStatus;
       if(!['invited','active','disabled'].includes(accountStatus))throw new RequestError('Invalid account status.');
       if(memberEmail===email&&accountStatus==='disabled')throw new RequestError('You cannot disable your own account.');
-      const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit), phone=optionalPhone(input.phone), smsNotifications=boolValue(input.smsNotifications);
-      if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this member’s approved and pending spend.');
-      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;existing.phone=phone;existing.smsNotifications=smsNotifications;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus,phone,smsNotifications});
+      const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit);
+      if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this memberâ€™s approved and pending spend.');
+      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus});
     } else throw new RequestError('Unknown action.');
   }
   const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,suspend:b.suspended?'Suspended business':'Reactivated business'};

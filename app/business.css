@@ -315,4 +315,3 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   .premium-auth-card .auth-copy{font-size:15px!important;line-height:1.65!important}
 }
 
-.check-row{display:flex!important;flex-direction:row!important;align-items:center;gap:10px;color:#536177;font-weight:700}.check-row input{width:18px!important;height:18px!important;min-height:auto!important;accent-color:#285eea}
