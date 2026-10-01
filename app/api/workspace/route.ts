@@ -1,6 +1,7 @@
 import { initialState } from '@/lib/demo';
 import type { State } from '@/lib/model';
 import { mutate, RequestError, visibleState } from '@/lib/operations';
+import { notifyExpenseReviewed, notifyExpenseSubmitted } from '@/lib/notifications';
 import { getSupabaseAdmin, hasSupabaseServerConfig, userEmailFromToken } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -102,7 +103,15 @@ export async function POST(request: Request) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) throw new RequestError('Invalid request.');
 
     const { state, version } = await load(email);
+    const businessBefore = state.businesses.find((business) => business.id === input.businessId);
+    const pendingBefore = new Set(businessBefore?.expenses.filter((expense) => expense.status === 'pending').map((expense) => expense.id) ?? []);
+    const reviewedBefore = new Map(businessBefore?.expenses.map((expense) => [expense.id, expense.status]) ?? []);
+
     mutate(state, email, input);
+
+    const businessAfter = state.businesses.find((business) => business.id === input.businessId);
+    const newPendingExpense = businessAfter?.expenses.find((expense) => expense.status === 'pending' && !pendingBefore.has(expense.id));
+    const reviewedExpense = businessAfter?.expenses.find((expense) => reviewedBefore.get(expense.id) === 'pending' && expense.status !== 'pending');
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
@@ -115,6 +124,9 @@ export async function POST(request: Request) {
 
     if (error) throw error;
     if (!data) throw new RequestError('The workspace changed. Refresh and try again.', 409);
+
+    if (businessAfter && newPendingExpense) await notifyExpenseSubmitted(businessAfter, newPendingExpense);
+    if (businessAfter && reviewedExpense) await notifyExpenseReviewed(businessAfter, reviewedExpense);
 
     return Response.json(visibleState(state, email), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {

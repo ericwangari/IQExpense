@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
+import { GoogleIcon } from '@/components/google-icon';
 
 const roles = [
   { title: 'Platform admin', text: 'Approve businesses and monitor the whole SaaS.', icon: Sparkles },
@@ -81,7 +82,7 @@ export default function Login() {
 
           <div className="auth-form">
             <button className="secondary google-button" disabled={busy} type="button" onClick={() => void signInWithGoogle()}>
-              <span className="google-mark">G</span>
+              <span className="google-mark"><GoogleIcon /></span>
               Continue with Google
             </button>
             <div className="auth-divider"><span>or use email</span></div>

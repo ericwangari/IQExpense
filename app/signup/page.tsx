@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Building2, CircleDollarSign, ClipboardCheck, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
+import { GoogleIcon } from '@/components/google-icon';
 
 export default function Signup() {
   const router = useRouter();
@@ -75,7 +76,7 @@ export default function Signup() {
 
           <div className="auth-form">
             <button className="secondary google-button" disabled={busy} type="button" onClick={() => void signInWithGoogle()}>
-              <span className="google-mark">G</span>
+              <span className="google-mark"><GoogleIcon /></span>
               Continue with Google
             </button>
             <div className="auth-divider"><span>or create with email</span></div>
