@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ArrowRight, Building2, CircleDollarSign, ClipboardCheck, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { GoogleIcon } from '@/components/google-icon';
+import { authCallbackUrl } from '@/lib/auth-url';
 
 export default function Signup() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function Signup() {
     setBusy(true);
     const { error: oauthError } = await getSupabaseBrowser().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: authCallbackUrl('/') },
     });
     setBusy(false);
     if (oauthError) setError(oauthError.message);

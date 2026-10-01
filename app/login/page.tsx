@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { GoogleIcon } from '@/components/google-icon';
+import { authCallbackUrl } from '@/lib/auth-url';
 
 const roles = [
   { title: 'Platform admin', text: 'Approve businesses and monitor the whole SaaS.', icon: Sparkles },
@@ -38,7 +39,7 @@ export default function Login() {
     setBusy(true);
     const { error: oauthError } = await getSupabaseBrowser().auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${window.location.origin}/` },
+      options: { redirectTo: authCallbackUrl('/') },
     });
     setBusy(false);
     if (oauthError) setError(oauthError.message);
