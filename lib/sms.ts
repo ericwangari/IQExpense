@@ -8,9 +8,17 @@ export function hasSmsConfig() {
   return Boolean(accountSid && authToken && fromNumber);
 }
 
+export function smsConfigStatus() {
+  return {
+    hasAccountSid: Boolean(accountSid),
+    hasAuthToken: Boolean(authToken),
+    hasFromNumber: Boolean(fromNumber),
+  };
+}
+
 export async function sendSms(to: string | undefined, body: string): Promise<SmsResult> {
-  if (!to) return { sent: false, skipped: true };
-  if (!hasSmsConfig()) return { sent: false, skipped: true };
+  if (!to) return { sent: false, skipped: true, error: 'missing_recipient_phone' };
+  if (!hasSmsConfig()) return { sent: false, skipped: true, error: 'missing_twilio_environment_variables' };
 
   const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
     method: 'POST',
@@ -21,10 +29,12 @@ export async function sendSms(to: string | undefined, body: string): Promise<Sms
     body: new URLSearchParams({ To: to, From: fromNumber!, Body: body }),
   });
 
+  const payload = await response.text().catch(() => '');
+
   if (!response.ok) {
-    const detail = await response.text().catch(() => '');
-    return { sent: false, error: detail || response.statusText };
+    return { sent: false, error: payload || response.statusText };
   }
 
+  console.info('ExpenseIQ SMS sent', { toLast4: to.slice(-4), providerStatus: response.status });
   return { sent: true };
 }

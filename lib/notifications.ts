@@ -1,5 +1,5 @@
 import type { Business, Expense, Member } from './model';
-import { sendSms } from './sms';
+import { sendSms, smsConfigStatus } from './sms';
 
 const smsEligible = (member: Member) =>
   member.accountStatus !== 'disabled' && Boolean(member.smsNotifications && member.phone);
@@ -14,7 +14,25 @@ export async function notifyExpenseSubmitted(business: Business, expense: Expens
     (member.role === 'admin' || member.role === 'manager')
   );
 
-  if (!recipients.length) return;
+  if (!recipients.length) {
+    console.warn('ExpenseIQ SMS skipped: no eligible approval recipients', {
+      businessId: business.id,
+      members: business.members.map((member) => ({
+        email: member.email,
+        role: member.role,
+        accountStatus: member.accountStatus,
+        hasPhone: Boolean(member.phone),
+        smsNotifications: Boolean(member.smsNotifications),
+      })),
+    });
+    return;
+  }
+
+  console.info('ExpenseIQ SMS approval notification requested', {
+    businessId: business.id,
+    recipientCount: recipients.length,
+    smsConfig: smsConfigStatus(),
+  });
 
   const body = `ExpenseIQ: ${expense.submittedBy} submitted ${money(expense.amount, business.currency)} at ${expense.merchant}. Open ${business.name} to approve or reject it.`;
   const results = await Promise.allSettled(recipients.map((member) => sendSms(member.phone, body)));
@@ -24,7 +42,21 @@ export async function notifyExpenseSubmitted(business: Business, expense: Expens
 
 export async function notifyExpenseReviewed(business: Business, expense: Expense) {
   const submitter = business.members.find((member) => member.email === expense.submittedBy);
-  if (!submitter || !smsEligible(submitter)) return;
+  if (!submitter || !smsEligible(submitter)) {
+    console.warn('ExpenseIQ SMS skipped: submitter is not eligible for review notification', {
+      businessId: business.id,
+      submitterEmail: expense.submittedBy,
+      hasSubmitter: Boolean(submitter),
+      hasPhone: Boolean(submitter?.phone),
+      smsNotifications: Boolean(submitter?.smsNotifications),
+    });
+    return;
+  }
+
+  console.info('ExpenseIQ SMS review notification requested', {
+    businessId: business.id,
+    smsConfig: smsConfigStatus(),
+  });
 
   const decision = expense.status === 'approved' ? 'approved' : 'rejected';
   const reason = expense.reason ? ` Reason: ${expense.reason}` : '';
