@@ -2,7 +2,7 @@ export type Role = 'admin' | 'manager' | 'employee';
 export type AccountStatus = 'invited' | 'active' | 'disabled';
 export type BusinessStatus = 'pending' | 'approved' | 'rejected';
 export type Permission = 'submit_expenses' | 'track_own_expenses' | 'review_expenses' | 'view_company_wallet' | 'manage_wallet' | 'manage_team' | 'manage_team_members' | 'manage_categories';
-export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus };
+export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus; walletVisible?: boolean; walletVisibilityRequested?: boolean };
 export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string };
 export type Entry = { id: string; amount: number; note: string; actor: string; date: string; expenseId?: string };
 export type Audit = { id: string; actor: string; action: string; date: string };
@@ -24,5 +24,5 @@ export const rolePermissions: Record<Role, Permission[]> = {
 };
 export const can = (role: Role | undefined, permission: Permission) => Boolean(role && rolePermissions[role].includes(permission));
 export function newBusiness(name: string, currency: string, email: string, approvalStatus: BusinessStatus = 'approved'): Business {
-  return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, approvalStatus, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active'}], categories: [...categories], expenses: [], ledger: [], audit: [] };
+  return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, approvalStatus, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active', walletVisible: true}], categories: [...categories], expenses: [], ledger: [], audit: [] };
 }

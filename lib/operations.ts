@@ -69,6 +69,19 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const name=required(input.name,'category name',60);
       if(b.categories.some(c=>c.toLowerCase()===name.toLowerCase()))throw new RequestError('This category already exists.');
       b.categories.push(name);
+
+    } else if(action==='requestWalletVisibility') {
+      if(role!=='employee')throw new RequestError('Only team members need to request wallet balance visibility.',403);
+      if(!signedInMember)throw new RequestError('Business membership is required for this action.',403);
+      signedInMember.walletVisibilityRequested=true;
+    } else if(action==='walletVisibility') {
+      if(!can(role,'manage_team')&&!can(role,'manage_team_members'))throw new RequestError('Only an admin or manager can control wallet visibility.',403);
+      const memberEmail=emailValue(input.email);
+      const target=b.members.find(m=>m.email===memberEmail);
+      if(!target)throw new RequestError('Team member not found.',404);
+      if(role==='manager'&&target.role!=='employee')throw new RequestError('Managers can only control team member wallet visibility.',403);
+      target.walletVisible=String(input.visible)==='true'||input.visible===true;
+      if(target.walletVisible)target.walletVisibilityRequested=false;
     } else if(action==='member') {
       if(!can(role,'manage_team')&&!can(role,'manage_team_members'))throw new RequestError('Only an admin or manager can manage team member accounts.',403);
       const memberEmail=emailValue(input.email), memberRole=required(input.role,'role') as Role;
@@ -81,10 +94,10 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(memberEmail===email&&accountStatus==='disabled')throw new RequestError('You cannot disable your own account.');
       const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit);
       if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this memberâ€™s approved and pending spend.');
-      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus});
+      if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;if(memberRole!=='employee'){existing.walletVisible=true;existing.walletVisibilityRequested=false;}}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus,walletVisible:memberRole!=='employee'});
     } else throw new RequestError('Unknown action.');
   }
-  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
+  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,requestWalletVisibility:'Requested wallet balance visibility',walletVisibility:`${input.visible?'Enabled':'Hidden'} wallet balance visibility for ${input.email}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
   b.audit.unshift({id:crypto.randomUUID(),actor:email,action:labels[String(action)],date:new Date().toISOString()});
 }
 export function visibleState(state: State, email: string) {
