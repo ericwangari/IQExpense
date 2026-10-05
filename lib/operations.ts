@@ -4,6 +4,7 @@ const required = (value: unknown, label: string, max=160) => {if(typeof value !=
 const emailValue = (value: unknown) => {const email=required(value,'email').toLowerCase();if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new RequestError('Enter a valid email address.');return email;};
 const amountValue = (value: unknown) => {if(typeof value!=='number'||!Number.isSafeInteger(value)||value<=0||value>100000000000)throw new RequestError('Enter a positive amount with at most two decimal places.');return value;};
 const optionalLimit = (value: unknown) => value === undefined || value === null || value === '' ? undefined : amountValue(value);
+const optionalText = (value: unknown, label: string, max=160) => value === undefined || value === null || value === '' ? undefined : required(value, label, max);
 export function mutate(state: State, email: string, input: Record<string,unknown>) {
   const platform = state.owner === email;
   const action = input.action;
@@ -46,7 +47,8 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date))||new Date(date).toISOString().slice(0,10)!==date||date>new Date().toISOString().slice(0,10))throw new RequestError('Enter a valid date that is not in the future.');
       const amount=amountValue(input.amount),remaining=memberRemaining(b,email);
       if(remaining!==null&&amount>remaining)throw new RequestError('This expense is above your remaining team wallet allowance.');
-      b.expenses.unshift({id:crypto.randomUUID(),merchant:required(input.merchant,'merchant'),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
+      const merchant=required(input.merchant,'merchant or payee name');
+      b.expenses.unshift({id:crypto.randomUUID(),merchant,payeeName:optionalText(input.payeeName,'payee name')||merchant,payeePhone:optionalText(input.payeePhone,'payee phone',40),payeeDetails:optionalText(input.payeeDetails,'payee details',240),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
     } else if(action==='review') {
       if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);
       const expense=b.expenses.find(e=>e.id===input.expenseId);
