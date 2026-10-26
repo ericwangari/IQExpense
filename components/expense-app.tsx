@@ -230,6 +230,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     canManageCategories = can(myRole, 'manage_categories'),
     isEmployee = myRole === 'employee';
   const walletVisibleToMe = !isEmployee || Boolean(me?.walletVisible);
+  const nameOf = (email: string) => business?.members.find(m => m.email === email)?.name || email;
 
   const workspaceNav = nav.filter(([label]) =>
     label === 'Approvals' ? canReview :
@@ -570,8 +571,6 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       <Toaster position="bottom-right" richColors />
     </main>
   );
-
-  const nameOf = (email: string) => business?.members.find(m => m.email === email)?.name || email;
 
   if (business && !platformOnly && (business.approvalStatus || 'approved') !== 'approved') return (
     <main className="loading">

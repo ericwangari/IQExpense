@@ -50,7 +50,7 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const merchant=required(input.merchant,'merchant or payee name');
       b.expenses.unshift({id:crypto.randomUUID(),merchant,payeeName:optionalText(input.payeeName,'payee name')||merchant,payeePhone:optionalText(input.payeePhone,'payee phone',40),payeeDetails:optionalText(input.payeeDetails,'payee details',240),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
     } else if(action==='review') {
-      if(!can(role,'review_expenses'))throw new RequestError('A manager, accountant, or business admin must review expenses.',403);
+      if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);
       const expense=b.expenses.find(e=>e.id===input.expenseId);
       if(!expense)throw new RequestError('Expense not found.',404);
       if(expense.status!=='pending')throw new RequestError('This expense has already been reviewed.',409);
