@@ -8,7 +8,7 @@ import {
   ChevronRight, CircleHelp, Clock3, Download, LayoutDashboard, LogOut,
   Plus, Receipt, Search, ShieldCheck, Tags, Users, Wallet, X, Activity,
   Layers3, RefreshCw, Server, Gauge, Trash2, Edit3, UserCheck, UserX,
-  AlertTriangle
+  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip
 } from 'lucide-react';
 
 import {
@@ -143,6 +143,15 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [currency, setCurrency] = useState('KES');
   const [demo, setDemo] = useState<ReturnType<typeof demoState> | null>(null);
 
+  // Enhanced Expense Submission States
+  const [expenseAmount, setExpenseAmount] = useState<string>('');
+  const [expenseDate, setExpenseDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [paymentMethod, setPaymentMethod] = useState<string>('mpesa');
+  const [purpose, setPurpose] = useState<string>('');
+  const [receiptNumber, setReceiptNumber] = useState<string>('');
+  const [receiptAttachment, setReceiptAttachment] = useState<string>('');
+  const [receiptFileName, setReceiptFileName] = useState<string>('');
+
   // Platform Performance & Diagnostics
   const [health, setHealth] = useState<HealthInfo | null>(null);
   const [checkingHealth, setCheckingHealth] = useState(false);
@@ -249,6 +258,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const allowance = business ? memberRemaining(business, data?.email || '') : null;
   const mySpend = business && data ? memberSpend(business, data.email) : 0;
   const myPending = business && data ? memberPending(business, data.email) : 0;
+  const currentNumAmount = parseFloat(expenseAmount) || 0;
+  const currentAmountCents = Math.round(currentNumAmount * 100);
 
   // Platform Admin Aggregates
   const stats = platformStats(data?.businesses || []);
@@ -277,6 +288,15 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       setAccountStatus('invited');
     }
     setCategory(business?.categories[0] || '');
+    if (name === 'expense') {
+      setExpenseAmount('');
+      setExpenseDate(new Date().toISOString().slice(0, 10));
+      setPaymentMethod('mpesa');
+      setPurpose('');
+      setReceiptNumber('');
+      setReceiptAttachment('');
+      setReceiptFileName('');
+    }
     setModal(name);
   }
 
@@ -342,7 +362,19 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     }
 
     const payload =
-      modal === 'expense' ? { action: 'submit', ...fields, amount: cents, category } :
+      modal === 'expense' ? {
+        action: 'submit',
+        ...fields,
+        amount: cents,
+        category,
+        date: fields.date || expenseDate,
+        description: fields.description || purpose,
+        paymentMethod: fields.paymentMethod || paymentMethod,
+        receiptNumber: fields.merchant || fields.receiptNumber || receiptNumber || undefined,
+        receiptAttachment: receiptAttachment || undefined,
+        merchant: fields.merchant || fields.payeeName || 'Business Expense',
+        payeeName: fields.payeeName || fields.merchant || 'Business Expense',
+      } :
       modal === 'allocate' ? { action: 'allocate', ...fields, amount: cents } :
       modal === 'category' ? { action: 'category', ...fields } :
       modal === 'member' ? { action: 'member', ...fields, email: selectedMember ? selectedMember.email : fields.email, role, accountStatus, walletLimit: fields.walletLimit === '' ? undefined : limitCents } :
@@ -1525,7 +1557,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
         {/* Dialog Modals */}
         <Dialog open={Boolean(modal)} onOpenChange={v => { if (!v && !busy) setModal(''); }}>
-          <DialogContent className="app-dialog">
+          <DialogContent className={`app-dialog ${modal === 'expense' ? 'app-dialog-wide' : ''}`}>
             <DialogHeader>
               <DialogTitle>
                 {{
@@ -1569,14 +1601,31 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 <div className="detail-amount">{money(selected.amount, business?.currency)}<Status status={selected.status} /></div>
                 <dl>
                   <div><dt>Payee</dt><dd>{payeeName(selected)}</dd></div>
+                  {selected.paymentMethod ? <div><dt>Payment method</dt><dd>{selected.paymentMethod === 'mpesa' ? 'M-Pesa / Mobile Money' : selected.paymentMethod === 'bank' ? 'Bank Transfer' : selected.paymentMethod === 'invoice' ? 'Vendor Invoice' : 'Card / Cash'}</dd></div> : null}
+                  {selected.receiptNumber ? <div><dt>Receipt / Ref</dt><dd>{selected.receiptNumber}</dd></div> : null}
                   {selected.payeePhone ? <div><dt>Payee contact</dt><dd>{selected.payeePhone}</dd></div> : null}
-                  {selected.payeeDetails ? <div><dt>Payee details</dt><dd>{selected.payeeDetails}</dd></div> : null}
+                  {selected.payeeDetails ? <div><dt>Payment notes</dt><dd>{selected.payeeDetails}</dd></div> : null}
                   <div><dt>Category</dt><dd>{selected.category}</dd></div>
                   <div><dt>Expense date</dt><dd>{shortDate(selected.date)}</dd></div>
                   <div><dt>Submitted by</dt><dd>{nameOf(selected.submittedBy)}</dd></div>
                   {selected.reviewedBy ? <div><dt>Reviewed by</dt><dd>{nameOf(selected.reviewedBy)}</dd></div> : null}
                   {selected.reviewNote ? <div><dt>Approval note</dt><dd>{selected.reviewNote}</dd></div> : null}
                   {selected.reason ? <div><dt>Rejection reason</dt><dd>{selected.reason}</dd></div> : null}
+                  {selected.receiptAttachment ? (
+                    <div style={{ gridColumn: '1/-1', display: 'flex', flexDirection: 'column', gap: 6, borderTop: '1px solid #edf2f7', paddingTop: 10 }}>
+                      <dt style={{ textAlign: 'left' }}>Receipt / Invoice Attachment</dt>
+                      <dd style={{ textAlign: 'left' }}>
+                        {selected.receiptAttachment.startsWith('data:image') ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img src={selected.receiptAttachment} alt="Receipt proof" style={{ maxWidth: 280, maxHeight: 180, borderRadius: 8, border: '1px solid #e2e8f0', objectFit: 'contain', background: '#f8fafc' }} />
+                        ) : (
+                          <a href={selected.receiptAttachment} download="receipt-proof" className="secondary" style={{ display: 'inline-flex', padding: '6px 14px', fontSize: 13, gap: 6 }}>
+                            <Download size={14} /> Download attached proof
+                          </a>
+                        )}
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
                 <h3>Business purpose</h3><p>{selected.description}</p>
                 {selected.status === 'pending' && (selected.submittedBy === data.email || canAdmin) ? (
@@ -1602,27 +1651,339 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               <form onSubmit={submit} className="app-form" key={modal}>
                 {modal === 'expense' ? (
                   <>
-                    <div className="expense-capture-card">
-                      <div className="expense-capture-head">
-                        <span className="approval-symbol"><Receipt size={20} /></span>
-                        <div><strong>Who is getting paid?</strong><p>Start with the payee, then add optional contact or payment notes only when they help the manager approve faster.</p></div>
+                    {/* Live Allowance & Budget Status */}
+                    {allowance !== null ? (
+                      <div className={`expense-budget-banner ${currentNumAmount > 0 && allowance - currentAmountCents < 0 ? 'over-budget' : ''}`}>
+                        <div className="budget-banner-icon">
+                          <Wallet size={20} />
+                        </div>
+                        <div className="budget-banner-info">
+                          <div className="budget-banner-title">
+                            <span>Your Monthly Virtual Allowance</span>
+                            <strong>{money(allowance, business?.currency)} remaining</strong>
+                          </div>
+                          {currentNumAmount > 0 ? (
+                            <div className={`budget-impact-text ${allowance - currentAmountCents < 0 ? 'text-danger' : 'text-success'}`}>
+                              {allowance - currentAmountCents < 0 ? (
+                                <>
+                                  <AlertTriangle size={14} />
+                                  <span>Exceeds monthly allowance by {money(Math.abs(allowance - currentAmountCents), business?.currency)}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Check size={14} />
+                                  <span>{money(allowance - currentAmountCents, business?.currency)} will remain after this expense</span>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="budget-impact-text text-muted">
+                              <span>Enter spend amount below to see remaining allowance in real-time</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="form-grid">
-                        <label className="premium-field"><span className="field-label">Payee name <b>Required</b></span><input name="payeeName" required maxLength={160} placeholder="Quickmart Thika, John plumber, Office supplier" /></label>
-                        <label className="premium-field"><span className="field-label">Merchant / reference <b>Required</b></span><input name="merchant" required maxLength={160} placeholder="Receipt #, invoice #, repair job, or branch" /></label>
+                    ) : null}
+
+                    {/* Hero Amount Card */}
+                    <div className="expense-hero-card">
+                      <div className="hero-amount-header">
+                        <span className="field-label">Amount ({business?.currency}) <b>Required</b></span>
+                        {currentNumAmount > 0 ? (
+                          <span className="hero-amount-formatted">
+                            {money(currentAmountCents, business?.currency)}
+                          </span>
+                        ) : null}
                       </div>
-                      <div className="form-grid">
-                        <label className="premium-field optional-field"><span className="field-label">Payee contact <em>Optional</em></span><input name="payeePhone" maxLength={40} placeholder="Phone, till, or account contact" /><small>Add this only when the approver needs a follow-up contact.</small></label>
-                        <label className="premium-field optional-field"><span className="field-label">Payment notes <em>Optional</em></span><input name="payeeDetails" maxLength={240} placeholder="Till number, branch, bank account, or notes" /><small>Use this for extra payment instructions or internal context.</small></label>
+                      <div className="hero-amount-input-wrap">
+                        <span className="currency-pill">{business?.currency || 'KES'}</span>
+                        <input
+                          name="amount"
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          required
+                          placeholder="0.00"
+                          className="hero-amount-input"
+                          value={expenseAmount}
+                          onChange={e => setExpenseAmount(e.target.value)}
+                          autoFocus
+                        />
+                      </div>
+                      <div className="preset-amounts-row">
+                        <span className="preset-label">Quick add:</span>
+                        {[500, 1000, 2500, 5000, 10000].map(val => (
+                          <button
+                            key={val}
+                            type="button"
+                            className="preset-chip"
+                            onClick={() => {
+                              const next = ((parseFloat(expenseAmount) || 0) + val).toFixed(2);
+                              setExpenseAmount(next);
+                            }}
+                          >
+                            +{val.toLocaleString()}
+                          </button>
+                        ))}
+                        {expenseAmount ? (
+                          <button
+                            type="button"
+                            className="preset-chip clear-chip"
+                            onClick={() => setExpenseAmount('')}
+                          >
+                            Clear
+                          </button>
+                        ) : null}
                       </div>
                     </div>
-                    <div className="expense-capture-card subtle">
-                      <div className="form-grid">
-                        <label className="premium-field"><span className="field-label">Amount ({business?.currency}) <b>Required</b></span><input name="amount" type="number" min="0.01" step="0.01" required placeholder="0.00" /></label>
-                        <label className="premium-field"><span className="field-label">Expense date <b>Required</b></span><input name="date" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} max={new Date().toISOString().slice(0, 10)} /></label>
+
+                    {/* Section 1: Classification & Date */}
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <Tags size={16} />
+                        <span>Expense Classification & Timeline</span>
                       </div>
-                      <label className="premium-field"><span className="field-label">Category <b>Required</b></span><Choice label="Category" value={category} onChange={setCategory} options={(business?.categories || []).map(c => ({ value: c, label: c }))} /></label>
-                      <label className="premium-field"><span className="field-label">Business purpose <b>Required</b></span><textarea name="description" required maxLength={500} rows={3} placeholder="What was this expense for?" /></label>
+                      <div className="form-grid">
+                        <label className="spacious-field">
+                          <span className="field-label">Category <b>Required</b></span>
+                          <Choice
+                            label="Category"
+                            value={category}
+                            onChange={setCategory}
+                            options={(business?.categories || []).map(c => ({ value: c, label: c }))}
+                          />
+                        </label>
+                        <label className="spacious-field">
+                          <span className="field-label">Expense Date <b>Required</b></span>
+                          <input
+                            name="date"
+                            type="date"
+                            required
+                            value={expenseDate}
+                            onChange={e => setExpenseDate(e.target.value)}
+                            max={new Date().toISOString().slice(0, 10)}
+                          />
+                          <div className="date-shortcuts">
+                            <button
+                              type="button"
+                              className="date-shortcut-btn"
+                              onClick={() => setExpenseDate(new Date().toISOString().slice(0, 10))}
+                            >
+                              Today
+                            </button>
+                            <button
+                              type="button"
+                              className="date-shortcut-btn"
+                              onClick={() => {
+                                const y = new Date();
+                                y.setDate(y.getDate() - 1);
+                                setExpenseDate(y.toISOString().slice(0, 10));
+                              }}
+                            >
+                              Yesterday
+                            </button>
+                          </div>
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Section 2: Payee & Disbursal Method */}
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <Building2 size={16} />
+                        <span>Payee & Payment Details</span>
+                      </div>
+
+                      <div className="payment-method-selector">
+                        {[
+                          { id: 'mpesa', label: 'M-Pesa / Mobile', icon: Smartphone },
+                          { id: 'bank', label: 'Bank Transfer', icon: Landmark },
+                          { id: 'card', label: 'Card / Cash', icon: CreditCard },
+                          { id: 'invoice', label: 'Vendor Invoice', icon: FileText },
+                        ].map(m => {
+                          const Icon = m.icon;
+                          const active = paymentMethod === m.id;
+                          return (
+                            <button
+                              key={m.id}
+                              type="button"
+                              className={`payment-method-pill ${active ? 'active' : ''}`}
+                              onClick={() => setPaymentMethod(m.id)}
+                            >
+                              <Icon size={14} />
+                              <span>{m.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <input type="hidden" name="paymentMethod" value={paymentMethod} />
+
+                      <div className="form-grid">
+                        <label className="spacious-field">
+                          <span className="field-label">
+                            {paymentMethod === 'mpesa' ? 'Recipient / Payee Name' :
+                             paymentMethod === 'bank' ? 'Account Holder / Beneficiary' :
+                             paymentMethod === 'invoice' ? 'Vendor / Supplier Name' :
+                             'Merchant / Store Name'} <b>Required</b>
+                          </span>
+                          <input
+                            name="payeeName"
+                            required
+                            maxLength={160}
+                            placeholder={
+                              paymentMethod === 'mpesa' ? 'e.g. John Kamau or Quickmart Supermarket' :
+                              paymentMethod === 'bank' ? 'e.g. Acacia Logistics Ltd' :
+                              paymentMethod === 'invoice' ? 'e.g. Safaricom Business / Microsoft' :
+                              'e.g. Shell Petrol Station or Java House'
+                            }
+                          />
+                        </label>
+                        <label className="spacious-field">
+                          <span className="field-label">
+                            {paymentMethod === 'mpesa' ? 'Phone / Till / Paybill #' :
+                             paymentMethod === 'bank' ? 'Bank & Account #' :
+                             paymentMethod === 'invoice' ? 'Invoice / Order #' :
+                             'Receipt Reference'} <em>Optional</em>
+                          </span>
+                          <input
+                            name="payeePhone"
+                            maxLength={40}
+                            placeholder={
+                              paymentMethod === 'mpesa' ? '0712 345 678 or Till 445522' :
+                              paymentMethod === 'bank' ? 'NCBA 1029384756' :
+                              paymentMethod === 'invoice' ? 'INV-2026-904' :
+                              'POS-993847'
+                            }
+                          />
+                        </label>
+                      </div>
+
+                      <div className="form-grid">
+                        <label className="spacious-field">
+                          <span className="field-label">Receipt / Reference Code <em>Optional</em></span>
+                          <input
+                            name="merchant"
+                            maxLength={160}
+                            value={receiptNumber}
+                            onChange={e => setReceiptNumber(e.target.value)}
+                            placeholder="e.g. QK87X492A or Receipt #3490"
+                          />
+                        </label>
+                        <label className="spacious-field">
+                          <span className="field-label">Disbursal / Payment Notes <em>Optional</em></span>
+                          <input
+                            name="payeeDetails"
+                            maxLength={240}
+                            placeholder="e.g. Direct till payment upon manager approval"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Section 3: Business Purpose & Suggestions */}
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <FileText size={16} />
+                        <span>Business Purpose & Justification</span>
+                      </div>
+                      <label className="spacious-field">
+                        <div className="field-label">
+                          <span>Explain business reason for approver <b>Required</b></span>
+                          <span className="char-count">{purpose.length} / 500</span>
+                        </div>
+                        <textarea
+                          name="description"
+                          required
+                          maxLength={500}
+                          rows={3}
+                          value={purpose}
+                          onChange={e => setPurpose(e.target.value)}
+                          placeholder="What was this expense for and how does it support company operations?"
+                        />
+                      </label>
+                      <div className="quick-purpose-row">
+                        <span className="preset-label">Quick suggestions:</span>
+                        {[
+                          'Client meeting & lunch',
+                          'Office supplies replenishment',
+                          'Travel fuel & transit',
+                          'Software tool subscription',
+                          'Equipment maintenance & repair'
+                        ].map(tag => (
+                          <button
+                            key={tag}
+                            type="button"
+                            className="purpose-chip"
+                            onClick={() => {
+                              setPurpose(prev => prev ? `${prev} · ${tag}` : tag);
+                            }}
+                          >
+                            + {tag}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Section 4: Receipt / Invoice Proof Attachment */}
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <Paperclip size={16} />
+                        <span>Receipt / Invoice Proof</span>
+                        <em className="optional-tag">Optional</em>
+                      </div>
+                      {receiptAttachment ? (
+                        <div className="attached-file-preview">
+                          <div className="attached-file-info">
+                            <FileText size={20} />
+                            <div>
+                              <strong>{receiptFileName || 'Receipt document attached'}</strong>
+                              <small>Document attached for reviewer audit</small>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="remove-attachment-btn"
+                            onClick={() => {
+                              setReceiptAttachment('');
+                              setReceiptFileName('');
+                            }}
+                          >
+                            <X size={14} /> Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="receipt-upload-dropzone">
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden-file-input"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 2 * 1024 * 1024) {
+                                toast.error('File size must be under 2MB.');
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = ev => {
+                                setReceiptAttachment(ev.target?.result as string || '');
+                                setReceiptFileName(file.name);
+                                toast.success(`Attached ${file.name}`);
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                          <div className="dropzone-content">
+                            <div className="dropzone-icon">
+                              <Paperclip size={18} />
+                            </div>
+                            <div>
+                              <strong>Attach receipt photo or PDF invoice</strong>
+                              <p>PNG, JPG or PDF up to 2MB. Approvers can inspect attached receipts before releasing funds.</p>
+                            </div>
+                          </div>
+                        </label>
+                      )}
                     </div>
                   </>
                 ) : null}

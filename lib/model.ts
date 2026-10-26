@@ -14,7 +14,7 @@ export type Permission =
   | 'export_reports'
   | 'view_audit_trail';
 export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus; walletVisible?: boolean; walletVisibilityRequested?: boolean };
-export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string; reviewNote?: string; payeeName?: string; payeePhone?: string; payeeDetails?: string };
+export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string; reviewNote?: string; payeeName?: string; payeePhone?: string; payeeDetails?: string; paymentMethod?: string; receiptNumber?: string; receiptAttachment?: string };
 export type Entry = { id: string; amount: number; note: string; actor: string; date: string; expenseId?: string };
 export type Audit = { id: string; actor: string; action: string; date: string };
 export type Business = { id: string; name: string; currency: string; suspended: boolean; demo: boolean; approvalStatus?: BusinessStatus; rejectionReason?: string; members: Member[]; categories: string[]; expenses: Expense[]; ledger: Entry[]; audit: Audit[] };
