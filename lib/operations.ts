@@ -50,17 +50,24 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const merchant=required(input.merchant,'merchant or payee name');
       b.expenses.unshift({id:crypto.randomUUID(),merchant,payeeName:optionalText(input.payeeName,'payee name')||merchant,payeePhone:optionalText(input.payeePhone,'payee phone',40),payeeDetails:optionalText(input.payeeDetails,'payee details',240),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
     } else if(action==='review') {
-      if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);
+      if(!can(role,'review_expenses'))throw new RequestError('A manager, accountant, or business admin must review expenses.',403);
       const expense=b.expenses.find(e=>e.id===input.expenseId);
       if(!expense)throw new RequestError('Expense not found.',404);
       if(expense.status!=='pending')throw new RequestError('This expense has already been reviewed.',409);
-      if(role!=='admin'&&expense.submittedBy===email)throw new RequestError('Another manager or business admin must review your own expense.',403);
+      if(role!=='admin'&&expense.submittedBy===email)throw new RequestError('Another manager, accountant, or business admin must review your own expense.',403);
       if(!['approved','rejected'].includes(String(input.status)))throw new RequestError('Invalid decision.');
       if(input.status==='approved') {
         if(balance(b)<expense.amount)throw new RequestError('The wallet has insufficient budget. Ask your business admin to allocate more.');
         b.ledger.unshift({id:crypto.randomUUID(),amount:-expense.amount,note:expense.merchant,actor:email,date:new Date().toISOString(),expenseId:expense.id});
+        expense.reviewNote=optionalText(input.reviewNote,'approval note',240);
       } else expense.reason=required(input.reason,'rejection reason',500);
       expense.status=input.status as 'approved'|'rejected';expense.reviewedBy=email;
+    } else if(action==='cancelExpense') {
+      const expense=b.expenses.find(e=>e.id===input.expenseId);
+      if(!expense)throw new RequestError('Expense not found.',404);
+      if(expense.status!=='pending')throw new RequestError('Only pending expenses can be cancelled.',409);
+      if(expense.submittedBy!==email&&!can(role,'manage_team'))throw new RequestError('You can only cancel your own pending expenses.',403);
+      b.expenses=b.expenses.filter(e=>e.id!==expense.id);
     } else if(action==='allocate') {
       if(!can(role,'manage_wallet'))throw new RequestError('Only the business admin can allocate budget.',403);
       const amount=amountValue(input.amount);
@@ -71,7 +78,12 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const name=required(input.name,'category name',60);
       if(b.categories.some(c=>c.toLowerCase()===name.toLowerCase()))throw new RequestError('This category already exists.');
       b.categories.push(name);
-
+    } else if(action==='deleteCategory') {
+      if(!can(role,'manage_categories'))throw new RequestError('Only the business admin can manage categories.',403);
+      const name=required(input.name,'category name',60);
+      if(b.expenses.some(e=>e.category===name))throw new RequestError('Cannot delete a category that has expenses assigned to it.',409);
+      if(b.categories.length<=1)throw new RequestError('A business must maintain at least one category.',400);
+      b.categories=b.categories.filter(c=>c!==name);
     } else if(action==='requestWalletVisibility') {
       if(role!=='employee')throw new RequestError('Only team members need to request wallet balance visibility.',403);
       if(!signedInMember)throw new RequestError('Business membership is required for this action.',403);
@@ -84,10 +96,26 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(role==='manager'&&target.role!=='employee')throw new RequestError('Managers can only control team member wallet visibility.',403);
       target.walletVisible=String(input.visible)==='true'||input.visible===true;
       if(target.walletVisible)target.walletVisibilityRequested=false;
+    } else if(action==='toggleAccountStatus') {
+      if(!can(role,'manage_team')&&!can(role,'manage_team_members'))throw new RequestError('Only an admin or manager can change account status.',403);
+      const memberEmail=emailValue(input.email);
+      const target=b.members.find(m=>m.email===memberEmail);
+      if(!target)throw new RequestError('Team member not found.',404);
+      if(role==='manager'&&target.role!=='employee')throw new RequestError('Managers can only change team member account status.',403);
+      if(memberEmail===email&&target.accountStatus==='active')throw new RequestError('You cannot disable your own account.');
+      target.accountStatus=target.accountStatus==='active'?'disabled':'active';
+    } else if(action==='removeMember') {
+      if(!can(role,'manage_team'))throw new RequestError('Only the business admin can remove team members.',403);
+      const memberEmail=emailValue(input.email);
+      if(memberEmail===email)throw new RequestError('You cannot remove yourself from the workspace.');
+      const target=b.members.find(m=>m.email===memberEmail);
+      if(!target)throw new RequestError('Team member not found.',404);
+      const hasHistory=b.expenses.some(e=>e.submittedBy===memberEmail)||b.ledger.some(l=>l.actor===memberEmail);
+      if(hasHistory){target.accountStatus='disabled';}else{b.members=b.members.filter(m=>m.email!==memberEmail);}
     } else if(action==='member') {
       if(!can(role,'manage_team')&&!can(role,'manage_team_members'))throw new RequestError('Only an admin or manager can manage team member accounts.',403);
       const memberEmail=emailValue(input.email), memberRole=required(input.role,'role') as Role;
-      if(!['admin','manager','employee'].includes(memberRole))throw new RequestError('Invalid role.');
+      if(!['admin','manager','accountant','employee'].includes(memberRole))throw new RequestError('Invalid role.');
       const existing=b.members.find(m=>m.email===memberEmail);
       if(role==='manager'&&(memberRole!=='employee'||existing?.role!=='employee'&&existing))throw new RequestError('Managers can only manage team member accounts.',403);
       if(memberEmail===email&&memberRole!=='admin')throw new RequestError('You cannot remove your own admin access.');
@@ -95,12 +123,12 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(!['invited','active','disabled'].includes(accountStatus))throw new RequestError('Invalid account status.');
       if(memberEmail===email&&accountStatus==='disabled')throw new RequestError('You cannot disable your own account.');
       const name=required(input.name,'team member name',80), walletLimit=optionalLimit(input.walletLimit);
-      if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this memberâ€™s approved and pending spend.');
+      if(walletLimit!==undefined&&walletLimit<memberSpend(b,memberEmail)+memberPending(b,memberEmail))throw new RequestError('Wallet limit is below this member’s approved and pending spend.');
       if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;if(memberRole!=='employee'){existing.walletVisible=true;existing.walletVisibilityRequested=false;}}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus,walletVisible:memberRole!=='employee'});
     } else throw new RequestError('Unknown action.');
   }
-  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,requestWalletVisibility:'Requested wallet balance visibility',walletVisibility:`${input.visible?'Enabled':'Hidden'} wallet balance visibility for ${input.email}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
-  b.audit.unshift({id:crypto.randomUUID(),actor:email,action:labels[String(action)],date:new Date().toISOString()});
+  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,cancelExpense:`Cancelled pending expense ${input.expenseId}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,deleteCategory:`Deleted category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,toggleAccountStatus:`Changed account status for ${input.email}`,removeMember:`Removed member ${input.email}`,requestWalletVisibility:'Requested wallet balance visibility',walletVisibility:`${input.visible?'Enabled':'Hidden'} wallet balance visibility for ${input.email}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
+  b.audit.unshift({id:crypto.randomUUID(),actor:email,action:labels[String(action)]||`Performed ${String(action)}`,date:new Date().toISOString()});
 }
 export function visibleState(state: State, email: string) {
   const platform=state.owner===email;

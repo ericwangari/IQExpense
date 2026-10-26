@@ -7,7 +7,8 @@ import {
   ArrowDownLeft, ArrowUpRight, ArrowRight, Bell, Building2, Check,
   ChevronRight, CircleHelp, Clock3, Download, LayoutDashboard, LogOut,
   Plus, Receipt, Search, ShieldCheck, Tags, Users, Wallet, X, Activity,
-  Layers3, RefreshCw, Server, Gauge
+  Layers3, RefreshCw, Server, Gauge, Trash2, Edit3, UserCheck, UserX,
+  AlertTriangle
 } from 'lucide-react';
 
 import {
@@ -24,7 +25,7 @@ import { toast } from 'sonner';
 
 import {
   balance, can, rolePermissions, memberPending, memberRemaining, memberSpend,
-  platformStats, type Business, type Expense, type View
+  canManageMemberRole, platformStats, type Business, type Expense, type Member, type Role, type View
 } from '@/lib/model';
 import { demoState } from '@/lib/demo';
 import { mutate, visibleState } from '@/lib/operations';
@@ -127,13 +128,17 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [page, setPage] = useState(platformOnly ? 'Overview' : 'Overview');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [memberRoleFilter, setMemberRoleFilter] = useState('all');
+  const [auditQuery, setAuditQuery] = useState('');
   const [reportGroup, setReportGroup] = useState('day');
   const [modal, setModal] = useState('');
   const [selected, setSelected] = useState<Expense | null>(null);
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState('');
   const [category, setCategory] = useState('');
-  const [role, setRole] = useState('employee');
+  const [role, setRole] = useState<Role>('employee');
   const [accountStatus, setAccountStatus] = useState('invited');
   const [currency, setCurrency] = useState('KES');
   const [demo, setDemo] = useState<ReturnType<typeof demoState> | null>(null);
@@ -204,16 +209,19 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
   const business = data?.businesses.find(b => b.id === activeId) || data?.businesses[0];
   const me = business?.members.find(m => m.email === data?.email), myRole = me?.role;
-  const canReview = can(myRole, 'review_expenses'), canAdmin = myRole === 'admin',
+  const canReview = can(myRole, 'review_expenses'),
+    canAdmin = myRole === 'admin',
     canManageAccounts = can(myRole, 'manage_team') || can(myRole, 'manage_team_members'),
+    canViewWallet = can(myRole, 'view_company_wallet'),
+    canManageCategories = can(myRole, 'manage_categories'),
     isEmployee = myRole === 'employee';
   const walletVisibleToMe = !isEmployee || Boolean(me?.walletVisible);
 
   const workspaceNav = nav.filter(([label]) =>
     label === 'Approvals' ? canReview :
-    label === 'Wallet' ? can(myRole, 'view_company_wallet') :
-    label === 'Categories' ? can(myRole, 'manage_categories') :
-    label === 'Team' ? canManageAccounts : true
+    label === 'Wallet' ? canViewWallet :
+    label === 'Categories' ? canManageCategories || canViewWallet :
+    label === 'Team' ? canManageAccounts || canAdmin : true
   );
 
   const pending = business?.expenses.filter(e => e.status === 'pending') || [];
@@ -237,14 +245,23 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     setPage(next);
     setQuery('');
     setFilter('all');
+    setCategoryFilter('all');
+    setMemberRoleFilter('all');
+    setAuditQuery('');
   }
 
-  function open(name: string, expense: Expense | null = null) {
+  function open(name: string, expense: Expense | null = null, member: Member | null = null) {
     setFormError('');
     setSelected(expense);
+    setSelectedMember(member);
+    if (member) {
+      setRole(member.role);
+      setAccountStatus(member.accountStatus || 'invited');
+    } else {
+      setRole('employee');
+      setAccountStatus('invited');
+    }
     setCategory(business?.categories[0] || '');
-    setRole('employee');
-    setAccountStatus('invited');
     setModal(name);
   }
 
@@ -276,7 +293,14 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         if (!response.ok) throw new Error(body.error);
         setData(body);
       }
-      toast.success(payload.action === 'review' ? 'Expense decision recorded' : 'Changes saved');
+      toast.success(
+        payload.action === 'review' ? 'Expense decision recorded' :
+        payload.action === 'cancelExpense' ? 'Pending expense cancelled' :
+        payload.action === 'deleteCategory' ? 'Category removed' :
+        payload.action === 'removeMember' ? 'Team member updated' :
+        payload.action === 'toggleAccountStatus' ? 'Account status updated' :
+        'Changes saved'
+      );
       setModal('');
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unable to save. Please try again.';
@@ -302,21 +326,41 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       return;
     }
 
-    const payload = modal === 'expense' ? { action: 'submit', ...fields, amount: cents, category } :
+    const payload =
+      modal === 'expense' ? { action: 'submit', ...fields, amount: cents, category } :
       modal === 'allocate' ? { action: 'allocate', ...fields, amount: cents } :
       modal === 'category' ? { action: 'category', ...fields } :
-      modal === 'member' ? { action: 'member', ...fields, role, accountStatus, walletLimit: fields.walletLimit === '' ? undefined : limitCents } :
+      modal === 'member' ? { action: 'member', ...fields, email: selectedMember ? selectedMember.email : fields.email, role, accountStatus, walletLimit: fields.walletLimit === '' ? undefined : limitCents } :
       modal === 'business' ? { action: 'registerBusiness', ...fields, currency } :
       modal === 'rejectBusiness' ? { action: 'reviewBusiness', businessId: activeId, status: 'rejected', ...fields } :
+      modal === 'approveWithNote' ? { action: 'review', expenseId: selected?.id, status: 'approved', reviewNote: fields.reviewNote } :
       { action: 'review', expenseId: selected?.id, status: 'rejected', ...fields };
 
     void act(payload);
   }
 
-  const filtered = (page === 'Approvals' ? (canReview ? pending : []) : business?.expenses || []).filter(e =>
-    (filter === 'all' || e.status === filter) &&
-    `${e.merchant} ${payeeName(e)} ${e.payeePhone || ''} ${e.payeeDetails || ''} ${e.category} ${e.submittedBy}`.toLowerCase().includes(query.toLowerCase())
-  );
+  // Enhanced Expense Filtering & Search
+  const filtered = (page === 'Approvals' ? (canReview ? pending : []) : business?.expenses || []).filter(e => {
+    const matchesStatus = filter === 'all' || e.status === filter;
+    const matchesCategory = categoryFilter === 'all' || e.category === categoryFilter;
+    const searchTarget = `${e.merchant} ${payeeName(e)} ${e.payeePhone || ''} ${e.payeeDetails || ''} ${e.category} ${e.description} ${e.submittedBy} ${(e.amount / 100).toFixed(2)}`.toLowerCase();
+    const matchesQuery = query === '' || searchTarget.includes(query.toLowerCase());
+    return matchesStatus && matchesCategory && matchesQuery;
+  });
+
+  // Enhanced Team Member Filtering & Search
+  const filteredMembers = (business?.members || []).filter(m => {
+    const matchesRole = memberRoleFilter === 'all' || m.role === memberRoleFilter;
+    const searchTarget = `${m.name} ${m.email} ${m.role} ${m.accountStatus || 'invited'}`.toLowerCase();
+    const matchesQuery = query === '' || searchTarget.includes(query.toLowerCase());
+    return matchesRole && matchesQuery;
+  });
+
+  // Filtered Audit Events
+  const filteredBusinessAudit = (business?.audit || []).filter(a => {
+    const searchTarget = `${a.action} ${a.actor} ${nameOf(a.actor)}`.toLowerCase();
+    return auditQuery === '' || searchTarget.includes(auditQuery.toLowerCase());
+  });
 
   const filteredBusinesses = (data?.businesses || []).filter(b => {
     const adminEmail = b.members.find(m => m.role === 'admin')?.email || '';
@@ -400,6 +444,28 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     a.download = `expenseiq-expenses-${reportGroup}.pdf`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  function exportLedger() {
+    if (!business) return;
+    const safe = (s: string) => `"${(/^[=+@\-\t\r]/.test(s) ? "'" : '') + s.replaceAll('"', '""')}"`;
+    const headers = ['Transaction Date', 'Type', 'Reference / Description', 'Recorded By', 'Amount', 'Currency'];
+    const rows = [...business.ledger].sort((a, b) => b.date.localeCompare(a.date)).map(e => [
+      shortDate(e.date),
+      e.amount > 0 ? 'Budget Allocation' : 'Approved Expense Deduction',
+      e.note,
+      nameOf(e.actor),
+      (Math.abs(e.amount) / 100).toFixed(2),
+      business.currency
+    ]);
+    const csv = [headers, ...rows].map(row => row.map(safe).join(',')).join('\r\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expenseiq-wallet-ledger-${business.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Wallet ledger exported');
   }
 
   function exportPlatformReport() {
@@ -516,7 +582,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
           <TableHead>Date</TableHead>
           <TableHead className="numeric">Amount</TableHead>
           <TableHead>Status</TableHead>
-          {review ? <TableHead>Review</TableHead> : null}
+          {review ? <TableHead>Review</TableHead> : <TableHead>Action</TableHead>}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -540,12 +606,24 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   <small className="muted">Needs another reviewer</small>
                 ) : canReview ? (
                   <div className="review-actions">
-                    <button disabled={busy || business?.suspended} aria-label={`Approve ${e.merchant}`} onClick={() => void act({ action: 'review', expenseId: e.id, status: 'approved' })}><Check size={17} /></button>
-                    <button disabled={busy || business?.suspended} aria-label={`Reject ${e.merchant}`} onClick={() => open('reject', e)}><X size={17} /></button>
+                    <button disabled={busy || business?.suspended} aria-label={`Approve ${e.merchant}`} title="Approve expense" onClick={() => void act({ action: 'review', expenseId: e.id, status: 'approved' })}><Check size={17} /></button>
+                    <button disabled={busy || business?.suspended} aria-label={`Reject ${e.merchant}`} title="Reject expense" onClick={() => open('reject', e)}><X size={17} /></button>
                   </div>
                 ) : null}
               </TableCell>
-            ) : null}
+            ) : (
+              <TableCell>
+                {e.status === 'pending' && (e.submittedBy === data.email || canAdmin) ? (
+                  <button className="text-button" disabled={busy || business?.suspended} title="Cancel pending expense" onClick={() => void act({ action: 'cancelExpense', expenseId: e.id })} style={{ color: '#dc2626' }}>
+                    Cancel
+                  </button>
+                ) : (
+                  <button className="text-button" onClick={() => open('details', e)}>
+                    Details
+                  </button>
+                )}
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>
@@ -630,7 +708,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               <div className="avatar">{data.email.slice(0, 2).toUpperCase()}</div>
               <div>
                 <strong>{nameOf(data.email)}</strong>
-                <small>{platformOnly ? 'Platform admin' : myRole === 'admin' ? 'Business admin' : myRole === 'manager' ? 'Manager' : myRole === 'employee' ? 'Employee' : 'Workspace user'}</small>
+                <small>{platformOnly ? 'Platform admin' : myRole === 'admin' ? 'Business admin' : myRole === 'manager' ? 'Manager' : myRole === 'accountant' ? 'Finance / Accountant' : myRole === 'employee' ? 'Employee' : 'Workspace user'}</small>
               </div>
               <button className="logout-button" onClick={() => void signOut()} aria-label="Sign out"><LogOut size={16} /></button>
             </div>
@@ -698,8 +776,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         Approvals: 'Keep business spending moving, with the right checks.',
                         Wallet: 'Allocate budgets and follow every movement.',
                         Categories: 'Organize spending around the way your business works.',
-                        Team: canAdmin ? 'Access control and login accounts for your business.' : 'Manage team member accounts, wallet limits, and access status.',
-                        Activity: 'A record of the decisions behind your spending.',
+                        Team: canAdmin ? 'Access control, member roles, and account security for your business.' : 'Manage team member accounts, wallet limits, and access status.',
+                        Activity: 'A record of the decisions and operations behind your spending.',
                         'Platform admin': 'Review registered businesses and manage platform access.'
                       }[page]}
                 </p>
@@ -733,7 +811,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   <Stat label={isEmployee ? 'Your approved expenses' : 'Approved spending'} value={money(spend, business.currency)} detail={`${approved.length} approved expenses · all time`} icon={ArrowUpRight} />
                   <Stat label="Pending approval" value={money(pendingTotal, business.currency)} detail={`${pending.length} expenses awaiting review`} icon={Clock3} />
                   <Stat label={isEmployee ? 'Your wallet balance' : 'Available budget'} value={isEmployee ? (walletVisibleToMe && allowance !== null ? money(allowance, business.currency) : me?.walletVisibilityRequested ? 'Requested' : 'Hidden') : money(balance(business), business.currency)} detail={isEmployee ? (walletVisibleToMe && me?.walletLimit ? `${money(mySpend, business.currency)} spent · ${money(myPending, business.currency)} pending` : me?.walletVisibilityRequested ? 'Waiting for manager approval' : 'Request visibility from your manager') : 'Internal wallet balance'} icon={Wallet} blue />
-                  <Stat label={isEmployee ? 'Rejected expenses' : 'Team members'} value={isEmployee ? String(business.expenses.filter(e => e.status === 'rejected').length) : String(business.members.length)} detail={isEmployee ? 'Review the reason and resubmit' : `${business.members.filter(m => m.role !== 'employee').length} admins & managers`} icon={Users} />
+                  <Stat label={isEmployee ? 'Rejected expenses' : 'Team members'} value={isEmployee ? String(business.expenses.filter(e => e.status === 'rejected').length) : String(business.members.length)} detail={isEmployee ? 'Review the reason and resubmit' : `${business.members.filter(m => m.role !== 'employee').length} admins, managers & finance`} icon={Users} />
                 </div>
                 <div className="dashboard-grid">
                   <section className="panel spending-panel">
@@ -760,7 +838,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     <div className="approval-symbol"><Bell size={23} /></div>
                     <div>
                       <strong>{reviewable.length} expenses need business approval</strong>
-                      <p>{money(reviewable.reduce((s, e) => s + e.amount, 0), business.currency)} is waiting for a business admin or manager decision.</p>
+                      <p>{money(reviewable.reduce((s, e) => s + e.amount, 0), business.currency)} is waiting for a business admin, manager, or finance decision.</p>
                     </div>
                     <button onClick={() => navigate('Approvals')}>Open approval queue <ArrowRight size={17} /></button>
                   </div>
@@ -789,27 +867,71 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 <div className="table-toolbar">
                   <div className="searchbox">
                     <Search size={17} />
-                    <input aria-label="Search expenses" placeholder="Search merchant, category or member…" value={query} onChange={e => setQuery(e.target.value)} />
+                    <input
+                      aria-label="Search expenses"
+                      placeholder="Search payee, merchant, category, or submitter…"
+                      value={query}
+                      onChange={e => setQuery(e.target.value)}
+                    />
                   </div>
                   <div className="toolbar-right">
                     {page === 'Expenses' ? (
-                      <Choice label="Expense status" value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All statuses' }, { value: 'pending', label: 'Pending approval' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }]} />
+                      <Choice
+                        label="Expense status"
+                        value={filter}
+                        onChange={setFilter}
+                        options={[
+                          { value: 'all', label: 'All statuses' },
+                          { value: 'pending', label: 'Pending approval' },
+                          { value: 'approved', label: 'Approved' },
+                          { value: 'rejected', label: 'Rejected' }
+                        ]}
+                      />
                     ) : (
-                      <span className="muted">{reviewable.length} awaiting your review - {pending.length} total pending</span>
+                      <span className="muted">{reviewable.length} awaiting your review · {pending.length} total pending</span>
                     )}
-                    <Choice label="Report grouping" value={reportGroup} onChange={setReportGroup} options={[{ value: 'day', label: 'Report by day' }, { value: 'week', label: 'Report by week' }, { value: 'month', label: 'Report by month' }]} />
+                    <Choice
+                      label="Category filter"
+                      value={categoryFilter}
+                      onChange={setCategoryFilter}
+                      options={[
+                        { value: 'all', label: 'All categories' },
+                        ...business.categories.map(c => ({ value: c, label: c }))
+                      ]}
+                    />
+                    <Choice
+                      label="Report grouping"
+                      value={reportGroup}
+                      onChange={setReportGroup}
+                      options={[
+                        { value: 'day', label: 'Report by day' },
+                        { value: 'week', label: 'Report by week' },
+                        { value: 'month', label: 'Report by month' }
+                      ]}
+                    />
                     <button className="secondary" onClick={exportExpenses}><Download size={16} />Export CSV</button>
                     <button className="secondary" onClick={exportExpensesPdf}><Download size={16} />Export PDF</button>
                   </div>
                 </div>
                 {filtered.length ? transactions(filtered, page === 'Approvals') : (
-                  <Empty text={query ? 'No expenses match your search.' : page === 'Approvals' ? 'All caught up. No expenses are waiting for business approval.' : 'No expenses yet.'} />
+                  <Empty text={query || categoryFilter !== 'all' ? 'No expenses match your search and filter criteria.' : page === 'Approvals' ? 'All caught up. No expenses are waiting for business approval.' : 'No expenses yet.'} />
                 )}
               </section>
             ) : null}
 
             {business && page === 'Wallet' && !isEmployee && !platformOnly ? (
               <>
+                {allocated > 0 && balance(business) < allocated * 0.20 ? (
+                  <div className="approval-banner warning-banner">
+                    <div className="approval-symbol"><AlertTriangle size={23} /></div>
+                    <div>
+                      <strong>Low company wallet budget</strong>
+                      <p>{money(balance(business), business.currency)} remaining of {money(allocated, business.currency)} allocated budget ({Math.round(balance(business) / allocated * 100)}%). Business admins can allocate additional budget.</p>
+                    </div>
+                    {canAdmin ? <button onClick={() => open('allocate')}>Allocate budget <ArrowRight size={17} /></button> : null}
+                  </div>
+                ) : null}
+
                 <div className="wallet-grid">
                   <section className="wallet-card">
                     <div><Layers3 size={25} /><span>EXPENSEIQ BUSINESS</span></div>
@@ -834,7 +956,12 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 <section className="panel">
                   <div className="panel-title">
                     <div><h2>Wallet activity</h2><p>Budget allocations and approved expense deductions</p></div>
-                    <span className="subtle-tag">Internal funds only</span>
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <button className="secondary" onClick={exportLedger} style={{ fontSize: 13, minHeight: 34 }}>
+                        <Download size={14} />Export ledger
+                      </button>
+                      <span className="subtle-tag">Internal funds only</span>
+                    </div>
                   </div>
                   {business.ledger.length ? (
                     <Table>
@@ -874,9 +1001,22 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 {business.categories.map((c, i) => {
                   const expenses = approved.filter(e => e.category === c);
                   const total = expenses.reduce((s, e) => s + e.amount, 0);
+                  const canDelete = canAdmin && expenses.length === 0 && business.categories.length > 1;
                   return (
                     <section className="panel category-card" key={c}>
-                      <span className="category-icon" style={{ color: palettes[i % 6], background: palettes[i % 6] + '16' }}><Tags size={21} /></span>
+                      <div className="category-header">
+                        <span className="category-icon" style={{ color: palettes[i % 6], background: palettes[i % 6] + '16' }}><Tags size={21} /></span>
+                        {canDelete ? (
+                          <button
+                            className="category-delete"
+                            title={`Delete empty category "${c}"`}
+                            disabled={busy}
+                            onClick={() => void act({ action: 'deleteCategory', name: c })}
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        ) : null}
+                      </div>
                       <h2>{c}</h2>
                       <strong>{money(total, business.currency)}</strong>
                       <p>{expenses.length} approved expenses</p>
@@ -890,20 +1030,58 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
             {business && page === 'Team' && !isEmployee && !platformOnly ? (
               <>
+                {/* 4 Role Definition ACL Cards */}
                 <section className="acl-grid">
-                  {(['admin', 'manager', 'employee'] as const).map(r => (
+                  {(['admin', 'manager', 'accountant', 'employee'] as const).map(r => (
                     <article className="panel acl-card" key={r}>
-                      <span className={`role-label ${r}`}>{r === 'admin' ? 'Business admin' : r === 'manager' ? 'Manager' : 'Team member'}</span>
-                      <h2>{r === 'admin' ? 'Full workspace control' : r === 'manager' ? 'Team control and approvals' : 'Personal expense tracking'}</h2>
+                      <span className={`role-label ${r}`}>
+                        {r === 'admin' ? 'Business admin' : r === 'manager' ? 'Manager' : r === 'accountant' ? 'Finance / Accountant' : 'Team member'}
+                      </span>
+                      <h2>
+                        {r === 'admin' ? 'Full workspace control' :
+                         r === 'manager' ? 'Team control & approvals' :
+                         r === 'accountant' ? 'Financial oversight & approvals' :
+                         'Personal expense tracking'}
+                      </h2>
                       <p>{rolePermissions[r].map(p => p.replaceAll('_', ' ')).join(' · ')}</p>
                     </article>
                   ))}
                 </section>
+
                 <section className="panel">
                   <div className="panel-title">
-                    <div><h2>Member login accounts</h2><p>{canAdmin ? 'Business admins can manage every account and role.' : 'Managers can create, pause, and control team member accounts.'} Members sign in with the same email to open their own dashboard.</p></div>
+                    <div>
+                      <h2>Member login accounts</h2>
+                      <p>{canAdmin ? 'Business admins can manage every account and role.' : 'Managers can create and control team member accounts.'} Members sign in with the same email to open their own dashboard.</p>
+                    </div>
                     <span className="subtle-tag">{business.members.length} accounts</span>
                   </div>
+
+                  <div className="table-toolbar" style={{ borderBottom: '1px solid #edf1f6', padding: '12px 20px' }}>
+                    <div className="searchbox" style={{ maxWidth: 300 }}>
+                      <Search size={16} />
+                      <input
+                        placeholder="Filter members by name or email…"
+                        value={query}
+                        onChange={e => setQuery(e.target.value)}
+                      />
+                    </div>
+                    <div className="toolbar-right">
+                      <Choice
+                        label="Role filter"
+                        value={memberRoleFilter}
+                        onChange={setMemberRoleFilter}
+                        options={[
+                          { value: 'all', label: 'All roles' },
+                          { value: 'admin', label: 'Business admins' },
+                          { value: 'manager', label: 'Managers' },
+                          { value: 'accountant', label: 'Finance / Accountants' },
+                          { value: 'employee', label: 'Team members' }
+                        ]}
+                      />
+                    </div>
+                  </div>
+
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -914,24 +1092,86 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         <TableHead>Wallet limit</TableHead>
                         <TableHead>Remaining</TableHead>
                         <TableHead>Wallet visibility</TableHead>
-                        <TableHead>Permissions</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {business.members.map(m => (
-                        <TableRow key={m.email}>
-                          <TableCell>
-                            <div className="team-name"><span className="avatar">{m.name.slice(0, 2).toUpperCase()}</span><strong>{m.name}{m.email === data.email ? ' (you)' : ''}</strong></div>
-                          </TableCell>
-                          <TableCell>{m.email}</TableCell>
-                          <TableCell><span className={`role-label ${m.role}`}>{m.role === 'admin' ? 'Business admin' : m.role === 'manager' ? 'Manager' : 'Team member'}</span></TableCell>
-                          <TableCell><Status status={m.accountStatus || 'invited'} /></TableCell>
-                          <TableCell className="amount">{m.walletLimit ? money(m.walletLimit, business.currency) : 'No limit'}</TableCell>
-                          <TableCell className="amount">{m.walletLimit ? money(memberRemaining(business, m.email) ?? 0, business.currency) : 'Open'}</TableCell>
-                          <TableCell>{m.role === 'employee' ? <button className="text-button" disabled={busy || business.suspended} onClick={() => void act({ action: 'walletVisibility', email: m.email, visible: !m.walletVisible })}>{m.walletVisible ? 'Hide balance' : m.walletVisibilityRequested ? 'Approve request' : 'Show balance'}</button> : <span className="subtle-tag">Always visible</span>}</TableCell>
-                          <TableCell className="muted">{m.role === 'admin' ? 'Wallet, team, categories, approvals' : m.role === 'manager' ? 'Approvals, team member controls, company view' : 'Own dashboard and expense tracking only'}</TableCell>
-                        </TableRow>
-                      ))}
+                      {filteredMembers.map(m => {
+                        const canManageThisMember = canManageMemberRole(myRole, m.role);
+                        const isSelf = m.email === data.email;
+                        return (
+                          <TableRow key={m.email}>
+                            <TableCell>
+                              <div className="team-name">
+                                <span className="avatar">{m.name.slice(0, 2).toUpperCase()}</span>
+                                <strong>{m.name}{isSelf ? ' (you)' : ''}</strong>
+                              </div>
+                            </TableCell>
+                            <TableCell>{m.email}</TableCell>
+                            <TableCell>
+                              <span className={`role-label ${m.role}`}>
+                                {m.role === 'admin' ? 'Business admin' : m.role === 'manager' ? 'Manager' : m.role === 'accountant' ? 'Finance' : 'Team member'}
+                              </span>
+                            </TableCell>
+                            <TableCell><Status status={m.accountStatus || 'invited'} /></TableCell>
+                            <TableCell className="amount">{m.walletLimit ? money(m.walletLimit, business.currency) : 'No limit'}</TableCell>
+                            <TableCell className="amount">{m.walletLimit ? money(memberRemaining(business, m.email) ?? 0, business.currency) : 'Open'}</TableCell>
+                            <TableCell>
+                              {m.role === 'employee' ? (
+                                <button
+                                  className="text-button"
+                                  disabled={busy || business.suspended}
+                                  onClick={() => void act({ action: 'walletVisibility', email: m.email, visible: !m.walletVisible })}
+                                >
+                                  {m.walletVisible ? 'Hide balance' : m.walletVisibilityRequested ? 'Approve request' : 'Show balance'}
+                                </button>
+                              ) : (
+                                <span className="subtle-tag">Always visible</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                {canManageThisMember && (!isSelf || canAdmin) ? (
+                                  <button
+                                    className="text-button"
+                                    disabled={busy || business.suspended}
+                                    title="Edit member account"
+                                    onClick={() => open('member', null, m)}
+                                  >
+                                    <Edit3 size={14} />
+                                    Edit
+                                  </button>
+                                ) : null}
+
+                                {canManageThisMember && !isSelf ? (
+                                  <button
+                                    className="text-button"
+                                    disabled={busy || business.suspended}
+                                    title={m.accountStatus === 'active' ? 'Disable access' : 'Enable access'}
+                                    onClick={() => void act({ action: 'toggleAccountStatus', email: m.email })}
+                                    style={{ color: m.accountStatus === 'active' ? '#b45309' : '#15803d' }}
+                                  >
+                                    {m.accountStatus === 'active' ? <UserX size={14} /> : <UserCheck size={14} />}
+                                    {m.accountStatus === 'active' ? 'Disable' : 'Enable'}
+                                  </button>
+                                ) : null}
+
+                                {canAdmin && !isSelf ? (
+                                  <button
+                                    className="text-button"
+                                    disabled={busy || business.suspended}
+                                    title="Remove member"
+                                    onClick={() => void act({ action: 'removeMember', email: m.email })}
+                                    style={{ color: '#dc2626' }}
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                ) : null}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                   <div className="panel-footnote">Invited accounts become active when that email signs in. Disabled accounts cannot read the workspace or submit expenses.</div>
@@ -941,14 +1181,34 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
             {business && page === 'Activity' && !platformOnly ? (
               <section className="panel">
-                <div className="panel-title"><h2>Audit trail</h2><span className="subtle-tag">{business.audit.length} events</span></div>
-                {business.audit.map(e => (
-                  <div className="audit-row" key={e.id}>
-                    <span className="audit-icon"><Activity size={18} /></span>
-                    <div><strong>{e.action}</strong><p>{nameOf(e.actor)}</p></div>
-                    <time>{new Date(e.date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                <div className="panel-title">
+                  <div>
+                    <h2>Audit trail</h2>
+                    <p>Chronological record of business expenses, budget changes, and member access events</p>
                   </div>
-                ))}
+                  <span className="subtle-tag">{business.audit.length} events</span>
+                </div>
+                <div className="table-toolbar" style={{ borderBottom: '1px solid #edf1f6', padding: '12px 20px' }}>
+                  <div className="searchbox" style={{ maxWidth: 320 }}>
+                    <Search size={16} />
+                    <input
+                      placeholder="Filter audit trail by action or actor…"
+                      value={auditQuery}
+                      onChange={e => setAuditQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {filteredBusinessAudit.length === 0 ? (
+                  <Empty text="No audit events match your search." />
+                ) : (
+                  filteredBusinessAudit.map(e => (
+                    <div className="audit-row" key={e.id}>
+                      <span className="audit-icon"><Activity size={18} /></span>
+                      <div><strong>{e.action}</strong><p>{nameOf(e.actor)} ({e.actor})</p></div>
+                      <time>{new Date(e.date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                    </div>
+                  ))
+                )}
               </section>
             ) : null}
 
@@ -1259,10 +1519,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   expense: 'Submit an expense',
                   allocate: 'Allocate wallet budget',
                   category: 'New expense category',
-                  member: 'Add or update a team member',
+                  member: selectedMember ? `Update ${selectedMember.name}` : 'Add team member',
                   business: 'Register a business',
                   reject: 'Reject expense',
                   rejectBusiness: 'Reject business registration',
+                  approveWithNote: 'Approve expense with note',
                   details: selected?.merchant || 'Expense details',
                   help: 'How your workspace works'
                 }[modal]}
@@ -1272,11 +1533,12 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   expense: 'Give your reviewer the details they need to approve this expense.',
                   allocate: 'Record an internal budget allocation. This does not move real money.',
                   category: 'Create a category that matches your business spending.',
-                  member: 'Grant access by sign-in email. No invitation email will be sent.',
+                  member: selectedMember ? 'Adjust member role, access status, and monthly wallet limit.' : 'Grant access by sign-in email. No invitation email will be sent.',
                   business: 'Submit your business for platform admin approval.',
                   reject: 'Tell the submitter why this expense cannot be approved.',
                   rejectBusiness: 'Tell the business admin why this registration cannot be approved yet.',
-                  details: 'Expense details and approval history.',
+                  approveWithNote: 'Optional note to attach to this approved expense.',
+                  details: 'Expense details, payee contacts, and approval history.',
                   help: 'From expense submission to an accountable decision.'
                 }[modal]}
               </DialogDescription>
@@ -1286,7 +1548,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               <div className="help-content">
                 <h3>1. Allocate a budget</h3><p>Business admins add internal budget to the company wallet.</p>
                 <h3>2. Submit expenses</h3><p>Team members select a category and explain the business purpose.</p>
-                <h3>3. Review independently</h3><p>Managers and admins approve or reject expenses. Managers need another reviewer for their own submissions; business admins can approve inside their workspace.</p>
+                <h3>3. Review independently</h3><p>Managers, finance accountants, and admins approve or reject expenses. Submissions need another reviewer for self-approval.</p>
                 <h3>4. Follow the balance</h3><p>Approval deducts the expense once. Activity records every decision. Wallets track budgets only and do not hold real money.</p>
               </div>
             ) : modal === 'details' && selected ? (
@@ -1300,13 +1562,23 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   <div><dt>Expense date</dt><dd>{shortDate(selected.date)}</dd></div>
                   <div><dt>Submitted by</dt><dd>{nameOf(selected.submittedBy)}</dd></div>
                   {selected.reviewedBy ? <div><dt>Reviewed by</dt><dd>{nameOf(selected.reviewedBy)}</dd></div> : null}
+                  {selected.reviewNote ? <div><dt>Approval note</dt><dd>{selected.reviewNote}</dd></div> : null}
+                  {selected.reason ? <div><dt>Rejection reason</dt><dd>{selected.reason}</dd></div> : null}
                 </dl>
                 <h3>Business purpose</h3><p>{selected.description}</p>
-                {selected.reason ? <><h3>Rejection reason</h3><p>{selected.reason}</p></> : null}
-                {selected.status === 'pending' && canReview && (canAdmin || selected.submittedBy !== data.email) ? (
-                  <div className="notice">Business admins and managers can approve or reject this expense inside this workspace.</div>
-                ) : null}
-                {selected.status === 'pending' && canReview && (canAdmin || selected.submittedBy !== data.email) ? (
+                {selected.status === 'pending' && (selected.submittedBy === data.email || canAdmin) ? (
+                  <div style={{ marginTop: 20, display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+                    <button className="secondary" disabled={busy || business?.suspended} onClick={() => void act({ action: 'cancelExpense', expenseId: selected.id })} style={{ color: '#dc2626' }}>
+                      Cancel expense
+                    </button>
+                    {canReview && (canAdmin || selected.submittedBy !== data.email) ? (
+                      <>
+                        <button className="secondary" disabled={busy || business?.suspended} onClick={() => open('reject', selected)}>Reject</button>
+                        <button className="primary" disabled={busy || business?.suspended} onClick={() => void act({ action: 'review', expenseId: selected.id, status: 'approved' })}>Approve expense</button>
+                      </>
+                    ) : null}
+                  </div>
+                ) : selected.status === 'pending' && canReview && (canAdmin || selected.submittedBy !== data.email) ? (
                   <div className="form-actions">
                     <button className="secondary" disabled={busy || business?.suspended} onClick={() => open('reject', selected)}>Reject</button>
                     <button className="primary" disabled={busy || business?.suspended} onClick={() => void act({ action: 'review', expenseId: selected.id, status: 'approved' })}>Approve expense</button>
@@ -1355,12 +1627,48 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
                 {modal === 'member' ? (
                   <>
-                    <label>Full name<input name="name" required maxLength={80} placeholder="e.g. Amina Hassan" /></label>
-                    <label>Login email<input name="email" type="email" required placeholder="name@company.com" /></label>
-                    <label>Role<Choice label="Role" value={role} onChange={setRole} options={(canAdmin ? [{ value: 'employee', label: 'Team member — own dashboard only' }, { value: 'manager', label: 'Manager — approvals and team member controls' }, { value: 'admin', label: 'Business admin — manage access, wallet and policy' }] : [{ value: 'employee', label: 'Team member — own dashboard only' }])} /></label>
-                    <label>Account status<Choice label="Account status" value={accountStatus} onChange={setAccountStatus} options={[{ value: 'invited', label: 'Invited — can activate by signing in' }, { value: 'active', label: 'Active — access enabled' }, { value: 'disabled', label: 'Disabled — access blocked' }]} /></label>
-                    <label>Monthly virtual wallet limit ({business?.currency})<input name="walletLimit" type="number" min="0.01" step="0.01" placeholder="Leave blank for no limit" /></label>
-                    <p className="muted">{canAdmin ? 'Admins can assign any business role.' : 'Managers can create and control team member accounts only.'} Authentication happens through secure sign-in; ACL permissions are enforced by role and account status.</p>
+                    <label>Full name<input name="name" required maxLength={80} defaultValue={selectedMember?.name || ''} placeholder="e.g. Amina Hassan" /></label>
+                    <label>Login email<input name="email" type="email" required defaultValue={selectedMember?.email || ''} readOnly={Boolean(selectedMember)} placeholder="name@company.com" /></label>
+                    <label>Role
+                      <Choice
+                        label="Role"
+                        value={role}
+                        onChange={v => setRole(v as Role)}
+                        options={
+                          canAdmin ? [
+                            { value: 'employee', label: 'Team member — personal expense dashboard' },
+                            { value: 'accountant', label: 'Finance / Accountant — wallet audit & approvals' },
+                            { value: 'manager', label: 'Manager — team control & approvals' },
+                            { value: 'admin', label: 'Business admin — full workspace control' }
+                          ] : [
+                            { value: 'employee', label: 'Team member — personal expense dashboard' }
+                          ]
+                        }
+                      />
+                    </label>
+                    <label>Account status
+                      <Choice
+                        label="Account status"
+                        value={accountStatus}
+                        onChange={setAccountStatus}
+                        options={[
+                          { value: 'invited', label: 'Invited — can activate by signing in' },
+                          { value: 'active', label: 'Active — access enabled' },
+                          { value: 'disabled', label: 'Disabled — access blocked' }
+                        ]}
+                      />
+                    </label>
+                    <label>Monthly virtual wallet limit ({business?.currency})
+                      <input
+                        name="walletLimit"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        defaultValue={selectedMember?.walletLimit ? (selectedMember.walletLimit / 100).toFixed(2) : ''}
+                        placeholder="Leave blank for no limit"
+                      />
+                    </label>
+                    <p className="muted">{canAdmin ? 'Admins can assign any business role.' : 'Managers can create and control team member accounts only.'} Role permissions are enforced consistently on all client and server operations.</p>
                   </>
                 ) : null}
 
@@ -1380,11 +1688,17 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   <label>Reason for rejection<textarea name="reason" required maxLength={500} rows={3} placeholder="Explain what needs to change…" /></label>
                 ) : null}
 
+                {modal === 'approveWithNote' ? (
+                  <label>Approval note <em>Optional</em>
+                    <textarea name="reviewNote" maxLength={240} rows={2} placeholder="Optional note for the submitter (e.g. Approved for project supplies)…" />
+                  </label>
+                ) : null}
+
                 {formError ? <p className="form-error" role="alert">{formError}</p> : null}
                 <div className="form-actions">
                   <button className="secondary" type="button" disabled={busy} onClick={() => setModal('')}>Cancel</button>
                   <button className="primary" disabled={busy} type="submit">
-                    {busy ? 'Saving…' : { expense: 'Submit for approval', allocate: 'Allocate budget', category: 'Create category', member: 'Save team member', business: 'Submit registration', reject: 'Reject expense', rejectBusiness: 'Reject registration' }[modal]}
+                    {busy ? 'Saving…' : { expense: 'Submit for approval', allocate: 'Allocate budget', category: 'Create category', member: 'Save team member', business: 'Submit registration', reject: 'Reject expense', rejectBusiness: 'Reject registration', approveWithNote: 'Confirm approval' }[modal]}
                   </button>
                 </div>
               </form>

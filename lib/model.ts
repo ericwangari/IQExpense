@@ -1,9 +1,20 @@
-export type Role = 'admin' | 'manager' | 'employee';
+export type Role = 'admin' | 'manager' | 'accountant' | 'employee';
 export type AccountStatus = 'invited' | 'active' | 'disabled';
 export type BusinessStatus = 'pending' | 'approved' | 'rejected';
-export type Permission = 'submit_expenses' | 'track_own_expenses' | 'review_expenses' | 'view_company_wallet' | 'manage_wallet' | 'manage_team' | 'manage_team_members' | 'manage_categories';
+export type Permission =
+  | 'submit_expenses'
+  | 'track_own_expenses'
+  | 'review_expenses'
+  | 'view_company_wallet'
+  | 'manage_wallet'
+  | 'manage_team'
+  | 'manage_team_members'
+  | 'manage_categories'
+  | 'view_all_expenses'
+  | 'export_reports'
+  | 'view_audit_trail';
 export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus; walletVisible?: boolean; walletVisibilityRequested?: boolean };
-export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string; payeeName?: string; payeePhone?: string; payeeDetails?: string };
+export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string; reviewNote?: string; payeeName?: string; payeePhone?: string; payeeDetails?: string };
 export type Entry = { id: string; amount: number; note: string; actor: string; date: string; expenseId?: string };
 export type Audit = { id: string; actor: string; action: string; date: string };
 export type Business = { id: string; name: string; currency: string; suspended: boolean; demo: boolean; approvalStatus?: BusinessStatus; rejectionReason?: string; members: Member[]; categories: string[]; expenses: Expense[]; ledger: Entry[]; audit: Audit[] };
@@ -18,11 +29,32 @@ export const memberRemaining = (b: Business, email: string) => {
   return typeof limit === 'number' ? Math.max(limit - memberSpend(b, email) - memberPending(b, email), 0) : null;
 };
 export const rolePermissions: Record<Role, Permission[]> = {
-  admin: ['submit_expenses', 'track_own_expenses', 'review_expenses', 'view_company_wallet', 'manage_wallet', 'manage_team', 'manage_categories'],
-  manager: ['submit_expenses', 'track_own_expenses', 'review_expenses', 'view_company_wallet', 'manage_team_members'],
-  employee: ['submit_expenses', 'track_own_expenses'],
+  admin: [
+    'submit_expenses', 'track_own_expenses', 'review_expenses',
+    'view_company_wallet', 'manage_wallet', 'manage_team',
+    'manage_team_members', 'manage_categories', 'view_all_expenses',
+    'export_reports', 'view_audit_trail'
+  ],
+  manager: [
+    'submit_expenses', 'track_own_expenses', 'review_expenses',
+    'view_company_wallet', 'manage_team_members', 'view_all_expenses',
+    'export_reports', 'view_audit_trail'
+  ],
+  accountant: [
+    'submit_expenses', 'track_own_expenses', 'review_expenses',
+    'view_company_wallet', 'view_all_expenses', 'export_reports',
+    'view_audit_trail'
+  ],
+  employee: [
+    'submit_expenses', 'track_own_expenses'
+  ],
 };
 export const can = (role: Role | undefined, permission: Permission) => Boolean(role && rolePermissions[role].includes(permission));
+export function canManageMemberRole(actorRole: Role | undefined, targetRole: Role): boolean {
+  if (actorRole === 'admin') return true;
+  if (actorRole === 'manager') return targetRole === 'employee';
+  return false;
+}
 export function newBusiness(name: string, currency: string, email: string, approvalStatus: BusinessStatus = 'approved'): Business {
   return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, approvalStatus, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active', walletVisible: true}], categories: [...categories], expenses: [], ledger: [], audit: [] };
 }
