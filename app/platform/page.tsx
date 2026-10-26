@@ -1,7 +1,7 @@
 "use client";
 
-import { ExpenseApp } from '../page';
+import { ExpenseApp } from '@/components/expense-app';
 
-export default function PlatformAdmin(){
- return <ExpenseApp platformOnly/>;
+export default function PlatformAdmin() {
+  return <ExpenseApp platformOnly />;
 }

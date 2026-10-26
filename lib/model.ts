@@ -26,3 +26,66 @@ export const can = (role: Role | undefined, permission: Permission) => Boolean(r
 export function newBusiness(name: string, currency: string, email: string, approvalStatus: BusinessStatus = 'approved'): Business {
   return { id: crypto.randomUUID(), name, currency, suspended: false, demo: false, approvalStatus, members: [{email, name: email.split('@')[0], role:'admin', walletLimit: 100000000, accountStatus:'active', walletVisible: true}], categories: [...categories], expenses: [], ledger: [], audit: [] };
 }
+export type PlatformStats = {
+  totalBusinesses: number;
+  activeBusinesses: number;
+  pendingBusinesses: number;
+  suspendedBusinesses: number;
+  totalMembers: number;
+  totalExpenses: number;
+  approvedExpenses: number;
+  pendingExpenses: number;
+  rejectedExpenses: number;
+  approvalRate: number;
+  spendByCurrency: Record<string, number>;
+  volumeByCurrency: Record<string, number>;
+};
+export function platformStats(businesses: Business[]): PlatformStats {
+  let active = 0, pending = 0, suspended = 0, totalMembers = 0;
+  let totalExpenses = 0, approvedExpenses = 0, pendingExpenses = 0, rejectedExpenses = 0;
+  const spendByCurrency: Record<string, number> = {};
+  const volumeByCurrency: Record<string, number> = {};
+
+  for (const b of businesses) {
+    const isPending = (b.approvalStatus || 'approved') === 'pending';
+    if (b.suspended) suspended++;
+    else if (isPending) pending++;
+    else active++;
+
+    totalMembers += (b.members || []).length;
+    const curr = b.currency || 'KES';
+    spendByCurrency[curr] = (spendByCurrency[curr] || 0);
+    volumeByCurrency[curr] = (volumeByCurrency[curr] || 0);
+
+    for (const e of (b.expenses || [])) {
+      totalExpenses++;
+      volumeByCurrency[curr] = (volumeByCurrency[curr] || 0) + e.amount;
+      if (e.status === 'approved') {
+        approvedExpenses++;
+        spendByCurrency[curr] = (spendByCurrency[curr] || 0) + e.amount;
+      } else if (e.status === 'pending') {
+        pendingExpenses++;
+      } else if (e.status === 'rejected') {
+        rejectedExpenses++;
+      }
+    }
+  }
+
+  const decided = approvedExpenses + rejectedExpenses;
+  const approvalRate = decided > 0 ? Math.round((approvedExpenses / decided) * 100) : 100;
+
+  return {
+    totalBusinesses: businesses.length,
+    activeBusinesses: active,
+    pendingBusinesses: pending,
+    suspendedBusinesses: suspended,
+    totalMembers,
+    totalExpenses,
+    approvedExpenses,
+    pendingExpenses,
+    rejectedExpenses,
+    approvalRate,
+    spendByCurrency,
+    volumeByCurrency,
+  };
+}
