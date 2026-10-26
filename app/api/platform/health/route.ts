@@ -36,8 +36,8 @@ export async function GET() {
       memoryUsageMb: memory,
       uptimeSeconds: uptime,
       timestamp: new Date().toISOString(),
-      nodeVersion: process.version,
-      environment: process.env.NODE_ENV || 'development',
+      nodeVersion: typeof process !== 'undefined' && process.version ? process.version : 'edge',
+      environment: (typeof process !== 'undefined' && process.env?.NODE_ENV) || 'development',
     },
     {
       headers: {

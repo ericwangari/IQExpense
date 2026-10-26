@@ -172,9 +172,23 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     (async () => {
       const headers = await authHeaders();
       const r = await fetch('/api/workspace', { headers });
-      const body = await r.json() as View & { error?: string };
+      let body: (View & { error?: string }) | null = null;
+      try {
+        body = (await r.json()) as View & { error?: string };
+      } catch {
+        body = null;
+      }
+
       if (!r.ok) {
-        if (r.status === 401 && ['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+        const isPreviewEnv = typeof window !== 'undefined' && (
+          ['localhost', '127.0.0.1', 'terminal.local'].includes(window.location.hostname) ||
+          window.location.hostname.includes('sandbox') ||
+          window.location.hostname.includes('webcontainer') ||
+          window.location.hostname.includes('preview') ||
+          !hasSupabaseBrowserConfig()
+        );
+
+        if (r.status === 401 && isPreviewEnv) {
           const state = demoState('you@acacia.example');
           if (live) {
             setDemo(state);
@@ -183,11 +197,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
           }
           return;
         }
-        throw new Error(body.error);
+        throw new Error(body?.error || `Request failed (${r.status})`);
       }
-      if (live) setData(body);
+      if (live && body) setData(body);
     })().catch(e => {
-      if (live) setError(e.message);
+      if (live) setError(e instanceof Error ? e.message : 'Failed to load workspace');
     });
     return () => { live = false; };
   }, []);
