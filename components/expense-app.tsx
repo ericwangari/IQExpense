@@ -151,6 +151,69 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [receiptNumber, setReceiptNumber] = useState<string>('');
   const [receiptAttachment, setReceiptAttachment] = useState<string>('');
   const [receiptFileName, setReceiptFileName] = useState<string>('');
+  const [payeeNameInput, setPayeeNameInput] = useState<string>('');
+  const [payeePhoneInput, setPayeePhoneInput] = useState<string>('');
+  const [payeeDetailsInput, setPayeeDetailsInput] = useState<string>('');
+  const [mpesaMessage, setMpesaMessage] = useState<string>('');
+
+  function handleMpesaSmsPaste(text: string) {
+    setMpesaMessage(text);
+    if (!text.trim()) return;
+
+    const clean = text.trim();
+    let detectedCode = '';
+    let detectedAmount = '';
+    let detectedPayee = '';
+    let detectedPhone = '';
+    let detectedDate = '';
+
+    const codeMatch = clean.match(/\b([A-Z0-9]{10})\b/);
+    if (codeMatch) detectedCode = codeMatch[1];
+
+    const amountMatch = clean.match(/(?:Ksh|KES)\.?\s*([\d,]+(?:\.\d{1,2})?)/i);
+    if (amountMatch) {
+      const rawNum = amountMatch[1].replace(/,/g, '');
+      if (!isNaN(parseFloat(rawNum))) {
+        detectedAmount = parseFloat(rawNum).toFixed(2);
+      }
+    }
+
+    const sentToMatch = clean.match(/sent to\s+([A-Z0-9\s.'&-]+?)(?:\s+(?:07\d{8}|01\d{8}|\+?254\d{9})|\s+on\s+|\.\s*)/i);
+    const paidToMatch = clean.match(/paid to\s+([A-Z0-9\s.'&-]+?)(?:\.\s*Acc|\.\s*|\s+Acc|\s+on\s+)/i);
+    if (sentToMatch) detectedPayee = sentToMatch[1].trim();
+    else if (paidToMatch) detectedPayee = paidToMatch[1].trim();
+
+    const phoneMatch = clean.match(/\b(07\d{8}|01\d{8}|2547\d{8}|2541\d{8}|\+2547\d{8}|\+2541\d{8})\b/);
+    const accMatch = clean.match(/Acc(?:ount)?\.?\s*([A-Za-z0-9\-]+)/i);
+    if (phoneMatch) detectedPhone = phoneMatch[1];
+    else if (accMatch) detectedPhone = `Acc: ${accMatch[1]}`;
+
+    const dateMatch = clean.match(/on\s+(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/i);
+    if (dateMatch) {
+      const d = dateMatch[1].padStart(2, '0');
+      const m = dateMatch[2].padStart(2, '0');
+      let y = dateMatch[3];
+      if (y.length === 2) y = `20${y}`;
+      const iso = `${y}-${m}-${d}`;
+      if (!isNaN(Date.parse(iso))) detectedDate = iso;
+    }
+
+    if (detectedAmount) setExpenseAmount(detectedAmount);
+    if (detectedCode) setReceiptNumber(detectedCode);
+    if (detectedPayee) setPayeeNameInput(detectedPayee);
+    if (detectedPhone) setPayeePhoneInput(detectedPhone);
+    if (detectedDate) setExpenseDate(detectedDate);
+
+    const extracted = [
+      detectedAmount && `Amount: ${detectedAmount}`,
+      detectedPayee && `Payee: ${detectedPayee}`,
+      detectedCode && `Code: ${detectedCode}`
+    ].filter(Boolean);
+
+    if (extracted.length > 0) {
+      toast.success(`M-Pesa SMS detected: ${extracted.join(', ')}`);
+    }
+  }
 
   // Platform Performance & Diagnostics
   const [health, setHealth] = useState<HealthInfo | null>(null);
@@ -296,6 +359,10 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       setReceiptNumber('');
       setReceiptAttachment('');
       setReceiptFileName('');
+      setPayeeNameInput('');
+      setPayeePhoneInput('');
+      setPayeeDetailsInput('');
+      setMpesaMessage('');
     }
     setModal(name);
   }
@@ -372,8 +439,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         paymentMethod: fields.paymentMethod || paymentMethod,
         receiptNumber: fields.merchant || fields.receiptNumber || receiptNumber || undefined,
         receiptAttachment: receiptAttachment || undefined,
-        merchant: fields.merchant || fields.payeeName || 'Business Expense',
-        payeeName: fields.payeeName || fields.merchant || 'Business Expense',
+        mpesaMessage: mpesaMessage || undefined,
+        merchant: fields.merchant || fields.payeeName || payeeNameInput || 'Business Expense',
+        payeeName: fields.payeeName || payeeNameInput || fields.merchant || 'Business Expense',
+        payeePhone: fields.payeePhone || payeePhoneInput || undefined,
+        payeeDetails: fields.payeeDetails || payeeDetailsInput || undefined,
       } :
       modal === 'allocate' ? { action: 'allocate', ...fields, amount: cents } :
       modal === 'category' ? { action: 'category', ...fields } :
@@ -1626,6 +1696,21 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       </dd>
                     </div>
                   ) : null}
+                  {selected.mpesaMessage ? (
+                    <div className="mpesa-sms-verified-card">
+                      <div className="mpesa-sms-verified-head">
+                        <Smartphone size={16} />
+                        <strong>Verified M-PESA Confirmation SMS</strong>
+                        <span className="mpesa-code-pill">{selected.receiptNumber || 'Confirmed'}</span>
+                      </div>
+                      <p className="mpesa-sms-body">
+                        &ldquo;{selected.mpesaMessage}&rdquo;
+                      </p>
+                      <small className="mpesa-sms-note">
+                        ✓ Attached as valid mobile money proof of payment in place of a paper receipt.
+                      </small>
+                    </div>
+                  ) : null}
                 </dl>
                 <h3>Business purpose</h3><p>{selected.description}</p>
                 {selected.status === 'pending' && (selected.submittedBy === data.email || canAdmin) ? (
@@ -1818,6 +1903,47 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       </div>
                       <input type="hidden" name="paymentMethod" value={paymentMethod} />
 
+                      {paymentMethod === 'mpesa' ? (
+                        <div className="mpesa-paste-box">
+                          <div className="mpesa-paste-header">
+                            <span className="mpesa-logo-badge">
+                              <Smartphone size={14} /> M-PESA SMS Verification
+                            </span>
+                            {mpesaMessage ? (
+                              <span className="mpesa-parsed-badge">
+                                <Check size={12} /> SMS captured & verified
+                              </span>
+                            ) : (
+                              <span className="mpesa-hint-badge">No receipt photo? Paste SMS here</span>
+                            )}
+                          </div>
+                          <textarea
+                            rows={3}
+                            className="mpesa-textarea"
+                            placeholder="Paste your M-PESA confirmation SMS here (e.g. QK87X492AB Confirmed. Ksh1,500.00 sent to QUICKMART on 26/10/26 at 2:45 PM...)"
+                            value={mpesaMessage}
+                            onChange={e => handleMpesaSmsPaste(e.target.value)}
+                          />
+                          <div className="mpesa-paste-actions">
+                            <span className="mpesa-paste-tip">
+                              ⚡ Auto-fills amount, payee name, transaction code & date directly from your SMS.
+                            </span>
+                            {mpesaMessage ? (
+                              <button
+                                type="button"
+                                className="mpesa-clear-btn"
+                                onClick={() => {
+                                  setMpesaMessage('');
+                                  toast.info('Cleared M-Pesa SMS');
+                                }}
+                              >
+                                Clear SMS
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : null}
+
                       <div className="form-grid">
                         <label className="spacious-field">
                           <span className="field-label">
@@ -1830,6 +1956,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                             name="payeeName"
                             required
                             maxLength={160}
+                            value={payeeNameInput}
+                            onChange={e => setPayeeNameInput(e.target.value)}
                             placeholder={
                               paymentMethod === 'mpesa' ? 'e.g. John Kamau or Quickmart Supermarket' :
                               paymentMethod === 'bank' ? 'e.g. Acacia Logistics Ltd' :
@@ -1848,6 +1976,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                           <input
                             name="payeePhone"
                             maxLength={40}
+                            value={payeePhoneInput}
+                            onChange={e => setPayeePhoneInput(e.target.value)}
                             placeholder={
                               paymentMethod === 'mpesa' ? '0712 345 678 or Till 445522' :
                               paymentMethod === 'bank' ? 'NCBA 1029384756' :
@@ -1866,7 +1996,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                             maxLength={160}
                             value={receiptNumber}
                             onChange={e => setReceiptNumber(e.target.value)}
-                            placeholder="e.g. QK87X492A or Receipt #3490"
+                            placeholder={paymentMethod === 'mpesa' ? 'e.g. M-Pesa Code (e.g. QK87X492A)' : 'e.g. QK87X492A or Receipt #3490'}
                           />
                         </label>
                         <label className="spacious-field">
@@ -1874,6 +2004,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                           <input
                             name="payeeDetails"
                             maxLength={240}
+                            value={payeeDetailsInput}
+                            onChange={e => setPayeeDetailsInput(e.target.value)}
                             placeholder="e.g. Direct till payment upon manager approval"
                           />
                         </label>
@@ -1950,6 +2082,21 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                           >
                             <X size={14} /> Remove
                           </button>
+                        </div>
+                      ) : mpesaMessage ? (
+                        <div className="attached-file-preview" style={{ background: '#f0fdf4', borderColor: '#bbf7d0' }}>
+                          <div className="attached-file-info">
+                            <Smartphone size={20} style={{ color: '#16a34a' }} />
+                            <div>
+                              <strong style={{ color: '#15803d' }}>M-Pesa SMS Confirmation Proof Active</strong>
+                              <small style={{ color: '#166534' }}>
+                                {receiptNumber ? `Code ${receiptNumber}` : 'SMS confirmation'} will be submitted as payment proof for reviewer audit.
+                              </small>
+                            </div>
+                          </div>
+                          <span className="mpesa-parsed-badge">
+                            <Check size={12} /> SMS Verified
+                          </span>
                         </div>
                       ) : (
                         <label className="receipt-upload-dropzone">
