@@ -15,6 +15,7 @@ import {
   WalletCards,
 } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
+import { syncAuthCookie } from '@/lib/cookies';
 import { GoogleIcon } from '@/components/google-icon';
 import { authCallbackUrl } from '@/lib/auth-url';
 
@@ -56,11 +57,14 @@ export default function Login() {
     const email = String(form.get('email') || '').trim().toLowerCase();
     const password = String(form.get('password') || '');
     setBusy(true);
-    const { error: signInError } = await getSupabaseBrowser().auth.signInWithPassword({ email, password });
+    const { data: signInData, error: signInError } = await getSupabaseBrowser().auth.signInWithPassword({ email, password });
     setBusy(false);
     if (signInError) {
       setError(signInError.message);
       return;
+    }
+    if (signInData.session?.access_token) {
+      syncAuthCookie(signInData.session.access_token, signInData.session.expires_in);
     }
     router.push('/');
     router.refresh();

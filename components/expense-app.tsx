@@ -8,7 +8,7 @@ import {
   ChevronRight, CircleHelp, Clock3, Download, LayoutDashboard, LogOut,
   Plus, Receipt, Search, ShieldCheck, Tags, Users, Wallet, X, Activity,
   Layers3, RefreshCw, Server, Gauge, Trash2, Edit3, UserCheck, UserX,
-  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip
+  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip, Cookie
 } from 'lucide-react';
 
 import {
@@ -31,6 +31,8 @@ import { demoState } from '@/lib/demo';
 import { mutate, visibleState } from '@/lib/operations';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { MobileAppLock } from '@/components/mobile-app-lock';
+import { getActiveBusinessCookie, setActiveBusinessCookie, clearActiveBusinessCookie, clearAuthCookie } from '@/lib/cookies';
+import { openCookieSettings } from '@/components/cookie-banner';
 
 const money = (n: number, currency = 'KES') =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency, maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n / 100);
@@ -124,7 +126,17 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [data, setData] = useState<View | null>(null);
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(false);
-  const [activeId, setActiveId] = useState('');
+  const [activeId, setActiveIdState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return getActiveBusinessCookie() || '';
+    }
+    return '';
+  });
+
+  const setActiveId = useCallback((id: string) => {
+    setActiveIdState(id);
+    if (id) setActiveBusinessCookie(id);
+  }, []);
   const [page, setPage] = useState(platformOnly ? 'Overview' : 'Overview');
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('all');
@@ -293,7 +305,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     return () => { live = false; };
   }, [platformOnly, data?.platform]);
 
-  const business = data?.businesses.find(b => b.id === activeId) || data?.businesses[0];
+  const savedBusinessId = typeof window !== 'undefined' ? getActiveBusinessCookie() : null;
+  const business =
+    data?.businesses.find(b => b.id === activeId) ||
+    (savedBusinessId ? data?.businesses.find(b => b.id === savedBusinessId) : undefined) ||
+    data?.businesses[0];
   const me = business?.members.find(m => m.email === data?.email), myRole = me?.role;
   const canReview = can(myRole, 'review_expenses'),
     canAdmin = myRole === 'admin',
@@ -369,6 +385,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
   async function signOut() {
     if (hasSupabaseBrowserConfig()) await getSupabaseBrowser().auth.signOut();
+    clearAuthCookie();
+    clearActiveBusinessCookie();
     setData(null);
     setDemo(null);
     router.push('/login');
@@ -818,6 +836,17 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               <ShieldCheck size={20} />
               <strong>{platformOnly ? 'Platform control room.' : 'Role-based workspace.'}</strong>
               <p>{platformOnly ? 'Monitor site performance, health, and all business accounts.' : 'Your menu only shows what your role can use.'}</p>
+            </div>
+            <div className="sidebar-footer-links">
+              <button
+                type="button"
+                className="sidebar-cookie-btn"
+                onClick={() => openCookieSettings()}
+                title="Manage cookie consent & privacy preferences"
+              >
+                <Cookie size={13} />
+                <span>Cookie Preferences</span>
+              </button>
             </div>
             <div className="profile">
               <div className="avatar">{data.email.slice(0, 2).toUpperCase()}</div>

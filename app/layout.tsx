@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./business.css";
 import { PwaInstaller } from "./pwa";
+import { CookieBanner } from "@/components/cookie-banner";
 
 export const metadata: Metadata = {
   title: "ExpenseIQ Business — Company Expense Management",
@@ -36,7 +37,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased">{children}<PwaInstaller /></body>
+      <body className="antialiased">
+        {children}
+        <PwaInstaller />
+        <CookieBanner />
+      </body>
     </html>
   );
 }

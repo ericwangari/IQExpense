@@ -4,6 +4,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Layers3 } from "lucide-react";
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from "@/lib/supabase-browser";
+import { syncAuthCookie } from "@/lib/cookies";
 
 function safeNext(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return "/";
@@ -46,16 +47,22 @@ function AuthCallbackInner() {
       }
 
       if (code) {
-        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const { data: authData, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         if (exchangeError) {
           if (alive) setMessage(exchangeError.message);
           return;
+        }
+        if (authData.session?.access_token) {
+          syncAuthCookie(authData.session.access_token, authData.session.expires_in);
         }
       } else {
         const { data } = await supabase.auth.getSession();
         if (!data.session) {
           setMessage("Google sign in did not return a session. Please try again from the login page.");
           return;
+        }
+        if (data.session.access_token) {
+          syncAuthCookie(data.session.access_token, data.session.expires_in);
         }
       }
 

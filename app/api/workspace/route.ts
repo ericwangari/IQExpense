@@ -1,3 +1,4 @@
+import { COOKIE_KEYS, getRequestCookie } from '@/lib/cookies';
 import { initialState } from '@/lib/demo';
 import type { State } from '@/lib/model';
 import { mutate, RequestError, visibleState } from '@/lib/operations';
@@ -24,7 +25,11 @@ function trustedHeaderEmail(request: Request) {
 }
 
 async function identity(request: Request) {
-  const token = request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const token =
+    request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1] ||
+    getRequestCookie(request, COOKIE_KEYS.AUTH_TOKEN) ||
+    getRequestCookie(request, 'sb-access-token');
+
   if (token && hasSupabaseServerConfig()) {
     const email = await userEmailFromToken(token);
     if (email) return email;

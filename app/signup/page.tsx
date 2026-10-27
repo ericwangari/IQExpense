@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Building2, CircleDollarSign, ClipboardCheck, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
+import { syncAuthCookie } from '@/lib/cookies';
 import { GoogleIcon } from '@/components/google-icon';
 import { authCallbackUrl } from '@/lib/auth-url';
 
@@ -53,6 +54,9 @@ export default function Signup() {
       return;
     }
     if (data.session) {
+      if (data.session.access_token) {
+        syncAuthCookie(data.session.access_token, data.session.expires_in);
+      }
       router.push('/');
       router.refresh();
       return;
