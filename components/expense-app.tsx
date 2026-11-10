@@ -8,7 +8,7 @@ import {
   ChevronRight, CircleHelp, Clock3, Download, LayoutDashboard, LogOut,
   Plus, Receipt, Search, ShieldCheck, Tags, Users, Wallet, X, Activity,
   Layers3, RefreshCw, Server, Gauge, Trash2, Edit3, UserCheck, UserX,
-  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip, Cookie
+  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip, Cookie, Sparkles
 } from 'lucide-react';
 
 import {
@@ -24,7 +24,7 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
 import {
-  balance, can, rolePermissions, memberPending, memberRemaining, memberSpend,
+  balance, depositTotal, allocationTotal, can, rolePermissions, memberPending, memberRemaining, memberSpend,
   canManageMemberRole, platformStats, type Business, type Expense, type Member, type Role, type View
 } from '@/lib/model';
 import { demoState } from '@/lib/demo';
@@ -33,6 +33,7 @@ import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-bro
 import { MobileAppLock } from '@/components/mobile-app-lock';
 import { getActiveBusinessCookie, setActiveBusinessCookie, clearActiveBusinessCookie, clearAuthCookie } from '@/lib/cookies';
 import { openCookieSettings } from '@/components/cookie-banner';
+import { DepositModal } from '@/components/deposit-modal';
 
 const money = (n: number, currency = 'KES') =>
   new Intl.NumberFormat('en-KE', { style: 'currency', currency, maximumFractionDigits: 2, minimumFractionDigits: 0 }).format(n / 100);
@@ -154,6 +155,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [accountStatus, setAccountStatus] = useState('invited');
   const [currency, setCurrency] = useState('KES');
   const [demo, setDemo] = useState<ReturnType<typeof demoState> | null>(null);
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
 
   // Enhanced Expense Submission States
   const [expenseAmount, setExpenseAmount] = useState<string>('');
@@ -414,6 +416,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         setData(body);
       }
       toast.success(
+        payload.action === 'deposit' ? 'Funds deposited successfully' :
         payload.action === 'review' ? 'Expense decision recorded' :
         payload.action === 'cancelExpense' ? 'Pending expense cancelled' :
         payload.action === 'deleteCategory' ? 'Category removed' :
@@ -876,6 +879,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               ) : (
                 <span className="workspace-status">{business?.suspended ? 'Account suspended' : 'Business workspace'}</span>
               )}
+              {!platformOnly && business && !business.suspended ? (
+                <button className="secondary topbar-link topbar-deposit-btn" onClick={() => setIsDepositOpen(true)}>
+                  <Wallet size={15} />Deposit
+                </button>
+              ) : null}
               {canReview && !platformOnly ? (
                 <button className="notification-pill" onClick={() => navigate('Approvals')} aria-label={`${reviewable.length} pending approvals`}>
                   <Bell size={16} />{reviewable.length}
@@ -936,9 +944,23 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 ) : page === 'Categories' && canAdmin ? (
                   <button className="primary" disabled={business?.suspended} onClick={() => open('category')}><Plus size={18} />New category</button>
                 ) : page === 'Wallet' && canAdmin ? (
-                  <button className="primary" disabled={business?.suspended} onClick={() => open('allocate')}><Plus size={18} />Allocate budget</button>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <button className="primary" disabled={business?.suspended} onClick={() => setIsDepositOpen(true)}>
+                      <Sparkles size={17} />Deposit funds
+                    </button>
+                    <button className="secondary" disabled={business?.suspended} onClick={() => open('allocate')}>
+                      <Plus size={17} />Allocate budget
+                    </button>
+                  </div>
                 ) : business && myRole ? (
-                  <button className="primary" disabled={business.suspended} onClick={() => open('expense')}><Plus size={18} />New expense</button>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                    <button className="secondary" disabled={business.suspended} onClick={() => setIsDepositOpen(true)}>
+                      <Wallet size={16} />Deposit
+                    </button>
+                    <button className="primary" disabled={business.suspended} onClick={() => open('expense')}>
+                      <Plus size={18} />New expense
+                    </button>
+                  </div>
                 ) : null}
               </div>
             </div>
@@ -1070,9 +1092,12 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     <div className="approval-symbol"><AlertTriangle size={23} /></div>
                     <div>
                       <strong>Low company wallet budget</strong>
-                      <p>{money(balance(business), business.currency)} remaining of {money(allocated, business.currency)} allocated budget ({Math.round(balance(business) / allocated * 100)}%). Business admins can allocate additional budget.</p>
+                      <p>{money(balance(business), business.currency)} remaining of {money(allocated, business.currency)} allocated budget ({Math.round(balance(business) / allocated * 100)}%). Business admins and managers can deposit additional funds.</p>
                     </div>
-                    {canAdmin ? <button onClick={() => open('allocate')}>Allocate budget <ArrowRight size={17} /></button> : null}
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <button className="primary" onClick={() => setIsDepositOpen(true)}>Deposit funds <Sparkles size={16} /></button>
+                      {canAdmin ? <button onClick={() => open('allocate')}>Allocate budget <ArrowRight size={17} /></button> : null}
+                    </div>
                   </div>
                 ) : null}
 
@@ -1081,15 +1106,25 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     <div><Layers3 size={25} /><span>EXPENSEIQ BUSINESS</span></div>
                     <p>Available budget</p>
                     <strong>{money(balance(business), business.currency)}</strong>
+                    <div style={{ margin: '14px 0 8px' }}>
+                      <button
+                        type="button"
+                        className="wallet-deposit-trigger-btn"
+                        onClick={() => setIsDepositOpen(true)}
+                      >
+                        <Sparkles size={16} /> Deposit funds to wallet
+                      </button>
+                    </div>
                     <div className="wallet-card-footer">
-                      <span>{business.name}<small>INTERNAL BUDGET WALLET</small></span>
+                      <span>{business.name}<small>COMPANY WALLET</small></span>
                       <Wallet size={32} />
                     </div>
                   </section>
                   <section className="panel wallet-summary">
                     <h2>Budget at a glance</h2>
                     <dl>
-                      <div><dt>Total allocated</dt><dd>{money(allocated, business.currency)}</dd></div>
+                      <div><dt>Deposited funds</dt><dd style={{ color: '#10b981', fontWeight: 700 }}>{money(depositTotal(business), business.currency)}</dd></div>
+                      <div><dt>Internal budget</dt><dd>{money(allocationTotal(business), business.currency)}</dd></div>
                       <div><dt>Approved spending</dt><dd>{money(spend, business.currency)}</dd></div>
                       <div><dt>Pending requests</dt><dd>{money(pendingTotal, business.currency)}</dd></div>
                     </dl>
@@ -1099,12 +1134,15 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 </div>
                 <section className="panel">
                   <div className="panel-title">
-                    <div><h2>Wallet activity</h2><p>Budget allocations and approved expense deductions</p></div>
+                    <div><h2>Wallet activity</h2><p>Payment deposits, budget allocations, and approved expense deductions</p></div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      <button className="secondary" onClick={() => setIsDepositOpen(true)} style={{ fontSize: 13, minHeight: 34 }}>
+                        <Sparkles size={14} />Deposit funds
+                      </button>
                       <button className="secondary" onClick={exportLedger} style={{ fontSize: 13, minHeight: 34 }}>
                         <Download size={14} />Export ledger
                       </button>
-                      <span className="subtle-tag">Internal funds only</span>
+                      <span className="subtle-tag">Live wallet ledger</span>
                     </div>
                   </div>
                   {business.ledger.length ? (
@@ -1123,7 +1161,32 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                             <TableCell>
                               <div className="ledger-title">
                                 <span className={e.amount > 0 ? 'credit-icon' : 'debit-icon'}>{e.amount > 0 ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}</span>
-                                <span>{e.note}<small>{e.amount > 0 ? 'Budget allocation' : 'Approved expense'}</small></span>
+                                <div>
+                                  <span>{e.note}</span>
+                                  <div className="ledger-meta-row" style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 3 }}>
+                                    <small>{e.type === 'deposit' ? 'Wallet deposit' : e.amount > 0 ? 'Budget allocation' : 'Approved expense'}</small>
+                                    {e.paymentMethod ? (
+                                      <span className={`payment-pill ${e.paymentMethod}`} style={{
+                                        fontSize: 10.5,
+                                        fontWeight: 700,
+                                        padding: '1px 6px',
+                                        borderRadius: 6,
+                                        background: e.paymentMethod === 'mpesa' ? '#dcfce7' : e.paymentMethod === 'card' ? '#dbeafe' : '#f3e8ff',
+                                        color: e.paymentMethod === 'mpesa' ? '#15803d' : e.paymentMethod === 'card' ? '#1d4ed8' : '#7e22ce',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 3
+                                      }}>
+                                        {e.paymentMethod.toUpperCase()}
+                                      </span>
+                                    ) : null}
+                                    {e.reference ? (
+                                      <span style={{ fontSize: 10.5, color: '#64748b', fontFamily: 'monospace' }}>
+                                        Ref: {e.reference}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
                               </div>
                             </TableCell>
                             <TableCell>{nameOf(e.actor)}</TableCell>
@@ -1134,7 +1197,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       </TableBody>
                     </Table>
                   ) : (
-                    <Empty text="Allocate a budget to start using your company wallet." />
+                    <Empty text="Deposit funds or allocate a budget to start using your company wallet." />
                   )}
                 </section>
               </>
@@ -2255,6 +2318,20 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             )}
           </DialogContent>
         </Dialog>
+        {business && data ? (
+          <DepositModal
+            open={isDepositOpen}
+            onOpenChange={setIsDepositOpen}
+            businessId={business.id}
+            businessName={business.name}
+            currency={business.currency}
+            currentBalance={balance(business)}
+            userEmail={data.email}
+            onSuccess={async (payload) => {
+              await act(payload);
+            }}
+          />
+        ) : null}
         <Toaster position="bottom-right" richColors />
       </SidebarProvider>
     </>

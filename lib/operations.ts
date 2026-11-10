@@ -72,7 +72,33 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(!can(role,'manage_wallet'))throw new RequestError('Only the business admin can allocate budget.',403);
       const amount=amountValue(input.amount);
       if(!Number.isSafeInteger(balance(b)+amount)||balance(b)+amount>100000000000)throw new RequestError('Wallet budget limit exceeded.');
-      b.ledger.unshift({id:crypto.randomUUID(),amount,note:required(input.note,'allocation reference'),actor:email,date:new Date().toISOString()});
+      b.ledger.unshift({id:crypto.randomUUID(),amount,note:required(input.note,'allocation reference'),actor:email,date:new Date().toISOString(),type:'allocation'});
+    } else if(action==='deposit') {
+      const amount=amountValue(input.amount);
+      if(!Number.isSafeInteger(balance(b)+amount)||balance(b)+amount>100000000000)throw new RequestError('Wallet budget limit exceeded.');
+      const paymentMethod=required(input.paymentMethod||input.method||'mpesa','payment method');
+      if(!['mpesa','card','bank'].includes(paymentMethod))throw new RequestError('Unsupported payment method. Choose M-Pesa, Card, or Bank transfer.');
+      const reference=optionalText(input.reference,'transaction reference',80)||`DEP-${Date.now().toString(36).toUpperCase()}`;
+      const phoneNumber=optionalText(input.phoneNumber||input.phone,'phone number',30);
+      const cardLast4=optionalText(input.cardLast4,'card digits',4);
+      const cardBrand=optionalText(input.cardBrand,'card brand',20);
+      const note=optionalText(input.note,'deposit note',160)||
+        (paymentMethod==='mpesa'?`M-Pesa deposit (${reference}${phoneNumber?` from ${phoneNumber}`:''})`:
+         paymentMethod==='card'?`Card deposit (${cardBrand||'Card'}${cardLast4?` •••• ${cardLast4}`:''} Ref: ${reference})`:
+         `Bank transfer deposit (Ref: ${reference})`);
+      b.ledger.unshift({
+        id:crypto.randomUUID(),
+        amount,
+        note,
+        actor:email,
+        date:new Date().toISOString(),
+        type:'deposit',
+        paymentMethod,
+        reference,
+        phoneNumber,
+        cardLast4,
+        cardBrand
+      });
     } else if(action==='category') {
       if(!can(role,'manage_categories'))throw new RequestError('Only the business admin can manage categories.',403);
       const name=required(input.name,'category name',60);
@@ -127,7 +153,21 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(existing){existing.name=name;existing.role=memberRole;existing.walletLimit=walletLimit;existing.accountStatus=accountStatus;if(memberRole!=='employee'){existing.walletVisible=true;existing.walletVisibilityRequested=false;}}else b.members.push({email:memberEmail,name,role:memberRole,walletLimit,accountStatus,walletVisible:memberRole!=='employee'});
     } else throw new RequestError('Unknown action.');
   }
-  const labels: Record<string,string>={submit:`Submitted expense: ${input.merchant}`,review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,cancelExpense:`Cancelled pending expense ${input.expenseId}`,allocate:`Allocated budget: ${input.note}`,category:`Added category: ${input.name}`,deleteCategory:`Deleted category: ${input.name}`,member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,toggleAccountStatus:`Changed account status for ${input.email}`,removeMember:`Removed member ${input.email}`,requestWalletVisibility:'Requested wallet balance visibility',walletVisibility:`${input.visible?'Enabled':'Hidden'} wallet balance visibility for ${input.email}`,suspend:b.suspended?'Suspended business':'Reactivated business'};
+  const labels: Record<string,string>={
+    submit:`Submitted expense: ${input.merchant}`,
+    review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,
+    cancelExpense:`Cancelled pending expense ${input.expenseId}`,
+    allocate:`Allocated budget: ${input.note}`,
+    deposit:`Deposited funds via ${String(input.paymentMethod||'payment').toUpperCase()}${input.reference?` (Ref: ${input.reference})`:''}`,
+    category:`Added category: ${input.name}`,
+    deleteCategory:`Deleted category: ${input.name}`,
+    member:`Provisioned ${input.email} as ${input.role}${input.walletLimit?` with wallet limit ${input.walletLimit}`:''}`,
+    toggleAccountStatus:`Changed account status for ${input.email}`,
+    removeMember:`Removed member ${input.email}`,
+    requestWalletVisibility:'Requested wallet balance visibility',
+    walletVisibility:`${input.visible?'Enabled':'Hidden'} wallet balance visibility for ${input.email}`,
+    suspend:b.suspended?'Suspended business':'Reactivated business'
+  };
   b.audit.unshift({id:crypto.randomUUID(),actor:email,action:labels[String(action)]||`Performed ${String(action)}`,date:new Date().toISOString()});
 }
 export function visibleState(state: State, email: string) {

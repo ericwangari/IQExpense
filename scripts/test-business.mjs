@@ -7,7 +7,7 @@ for(const name of ['model','operations','demo']){
  writeFileSync(new URL(`${name}.mjs`,out),ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replaceAll("'./model'","'./model.mjs'"));
 }
 const {mutate,visibleState}=await import(new URL('operations.mjs',out));
-const {newBusiness,balance}=await import(new URL('model.mjs',out));
+const {newBusiness,balance,depositTotal,allocationTotal}=await import(new URL('model.mjs',out));
 const owner='owner@example.com',manager='manager@example.com',employee='employee@example.com';
 const b=newBusiness('Test business','KES',owner),other=newBusiness('Other business','USD','other@example.com');
 b.members.push({email:manager,name:'Manager',role:'manager'},{email:employee,name:'Employee',role:'employee'});
@@ -52,4 +52,32 @@ rejects(()=>mutate(state,'founder@example.com',{businessId:registered.id,action:
 mutate(state,owner,{businessId:registered.id,action:'reviewBusiness',status:'approved'});assert.equal(registered.approvalStatus,'approved');checks++;
 mutate(state,'founder@example.com',{businessId:registered.id,action:'member',email:'x@example.com',name:'X',role:'employee'});assert.ok(registered.members.some(m=>m.email==='x@example.com'));checks++;
 assert.ok(b.audit.some(a=>a.action.startsWith('Approved')));checks++;
-console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension and audit.`);
+
+// Test deposit validation & payments
+rejects(()=>run(owner,{action:'deposit',amount:-500,paymentMethod:'mpesa'}),/positive amount/);
+rejects(()=>run(owner,{action:'deposit',amount:5000,paymentMethod:'crypto'}),/Unsupported payment method/);
+const balanceBeforeDeposit = balance(b);
+run(owner,{action:'deposit',amount:25000,paymentMethod:'mpesa',reference:'QA8912X45',phoneNumber:'254712345678'});
+assert.equal(balance(b), balanceBeforeDeposit + 25000);
+const mpesaEntry = b.ledger[0];
+assert.equal(mpesaEntry.type, 'deposit');
+assert.equal(mpesaEntry.paymentMethod, 'mpesa');
+assert.equal(mpesaEntry.reference, 'QA8912X45');
+checks++;
+
+// Test Card deposit
+run(manager,{action:'deposit',amount:50000,paymentMethod:'card',reference:'CRD-998822',cardLast4:'4242',cardBrand:'VISA'});
+assert.equal(balance(b), balanceBeforeDeposit + 75000);
+const cardEntry = b.ledger[0];
+assert.equal(cardEntry.type, 'deposit');
+assert.equal(cardEntry.cardLast4, '4242');
+assert.equal(cardEntry.cardBrand, 'VISA');
+checks++;
+
+// Verify depositTotal, allocationTotal & audit
+assert.equal(depositTotal(b), 75000);
+assert.equal(allocationTotal(b), 100000);
+assert.ok(b.audit.some(a=>a.action.includes('Deposited funds via MPESA')));
+checks++;
+
+console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, and audit.`);

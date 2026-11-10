@@ -15,13 +15,31 @@ export type Permission =
   | 'view_audit_trail';
 export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus; walletVisible?: boolean; walletVisibilityRequested?: boolean };
 export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string; reviewNote?: string; payeeName?: string; payeePhone?: string; payeeDetails?: string; paymentMethod?: string; receiptNumber?: string; receiptAttachment?: string; mpesaMessage?: string };
-export type Entry = { id: string; amount: number; note: string; actor: string; date: string; expenseId?: string };
+export type Entry = {
+  id: string;
+  amount: number;
+  note: string;
+  actor: string;
+  date: string;
+  expenseId?: string;
+  type?: 'allocation' | 'deposit' | 'expense';
+  paymentMethod?: 'mpesa' | 'card' | 'bank' | string;
+  reference?: string;
+  phoneNumber?: string;
+  cardLast4?: string;
+  cardBrand?: string;
+  fee?: number;
+};
 export type Audit = { id: string; actor: string; action: string; date: string };
 export type Business = { id: string; name: string; currency: string; suspended: boolean; demo: boolean; approvalStatus?: BusinessStatus; rejectionReason?: string; members: Member[]; categories: string[]; expenses: Expense[]; ledger: Entry[]; audit: Audit[] };
 export type State = { owner: string; businesses: Business[] };
 export type View = { email: string; platform: boolean; businesses: Business[] };
 export const categories = ['Travel & transport', 'Software & subscriptions', 'Office & supplies', 'Meals & entertainment', 'Marketing', 'Other'];
 export const balance = (b: Business) => b.ledger.reduce((sum, e) => sum + e.amount, 0);
+export const depositTotal = (b: Business) =>
+  b.ledger.filter(e => e.amount > 0 && (e.type === 'deposit' || Boolean(e.paymentMethod))).reduce((sum, e) => sum + e.amount, 0);
+export const allocationTotal = (b: Business) =>
+  b.ledger.filter(e => e.amount > 0 && e.type !== 'deposit' && !e.paymentMethod).reduce((sum, e) => sum + e.amount, 0);
 export const memberSpend = (b: Business, email: string) => b.expenses.filter(e => e.submittedBy === email && e.status === 'approved').reduce((sum, e) => sum + e.amount, 0);
 export const memberPending = (b: Business, email: string) => b.expenses.filter(e => e.submittedBy === email && e.status === 'pending').reduce((sum, e) => sum + e.amount, 0);
 export const memberRemaining = (b: Business, email: string) => {
