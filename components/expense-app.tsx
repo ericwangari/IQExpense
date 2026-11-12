@@ -8,7 +8,8 @@ import {
   ChevronRight, CircleHelp, Clock3, Download, LayoutDashboard, LogOut,
   Plus, Receipt, Search, ShieldCheck, Tags, Users, Wallet, X, Activity,
   Layers3, RefreshCw, Server, Gauge, Trash2, Edit3, UserCheck, UserX,
-  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip, Cookie, Sparkles
+  AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip, Cookie, Sparkles,
+  LayoutGrid, List, BarChart3, MessageSquare, Send, ChevronDown, Percent, Briefcase
 } from 'lucide-react';
 
 import {
@@ -25,7 +26,7 @@ import { toast } from 'sonner';
 
 import {
   balance, depositTotal, allocationTotal, can, rolePermissions, memberPending, memberRemaining, memberSpend,
-  canManageMemberRole, platformStats, type Business, type Expense, type Member, type Role, type View
+  canManageMemberRole, platformStats, isDuplicateExpense, type Business, type Expense, type Member, type Role, type View
 } from '@/lib/model';
 import { demoState } from '@/lib/demo';
 import { mutate, visibleState } from '@/lib/operations';
@@ -169,6 +170,15 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [payeePhoneInput, setPayeePhoneInput] = useState<string>('');
   const [payeeDetailsInput, setPayeeDetailsInput] = useState<string>('');
   const [mpesaMessage, setMpesaMessage] = useState<string>('');
+
+  // Odoo-style ERP Views, Grouping, Bulk Selection & Chatter
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'pivot'>('list');
+  const [groupBy, setGroupBy] = useState<'none' | 'category' | 'employee' | 'status' | 'paymentMethod' | 'month'>('none');
+  const [selectedExpenseIds, setSelectedExpenseIds] = useState<string[]>([]);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [chatterInput, setChatterInput] = useState<string>('');
+  const [taxRateInput, setTaxRateInput] = useState<string>('0');
+  const [analyticAccountInput, setAnalyticAccountInput] = useState<string>('');
 
   function handleMpesaSmsPaste(text: string) {
     setMpesaMessage(text);
@@ -381,6 +391,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       setPayeePhoneInput('');
       setPayeeDetailsInput('');
       setMpesaMessage('');
+      setTaxRateInput('0');
+      setAnalyticAccountInput('');
+    }
+    if (name === 'details') {
+      setChatterInput('');
     }
     setModal(name);
   }
@@ -399,11 +414,13 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     setBusy(true);
     setFormError('');
     try {
+      let nextView: View | null = null;
       if (preview && demo) {
         const next = structuredClone(demo);
         mutate(next, data!.email, { businessId: business?.id, ...payload });
         setDemo(next);
-        setData(visibleState(next, data!.email));
+        nextView = visibleState(next, data!.email);
+        setData(nextView);
       } else {
         const headers = await authHeaders();
         const response = await fetch('/api/workspace', {
@@ -413,18 +430,31 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         });
         const body = await response.json() as View & { error?: string };
         if (!response.ok) throw new Error(body.error);
+        nextView = body;
         setData(body);
       }
       toast.success(
         payload.action === 'deposit' ? 'Funds deposited successfully' :
         payload.action === 'review' ? 'Expense decision recorded' :
+        payload.action === 'bulkReview' ? 'Batch expense review completed' :
+        payload.action === 'addExpenseNote' ? 'Note posted to chatter' :
         payload.action === 'cancelExpense' ? 'Pending expense cancelled' :
         payload.action === 'deleteCategory' ? 'Category removed' :
         payload.action === 'removeMember' ? 'Team member updated' :
         payload.action === 'toggleAccountStatus' ? 'Account status updated' :
         'Changes saved'
       );
-      setModal('');
+      if (payload.action === 'bulkReview') {
+        setSelectedExpenseIds([]);
+      }
+      if (payload.action === 'addExpenseNote') {
+        setChatterInput('');
+        const updatedBiz = nextView?.businesses.find(b => b.id === business?.id);
+        const updatedExp = updatedBiz?.expenses.find(e => e.id === payload.expenseId);
+        if (updatedExp) setSelected(updatedExp);
+      } else {
+        setModal('');
+      }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unable to save. Please try again.';
       setFormError(message);
@@ -461,6 +491,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         receiptNumber: fields.merchant || fields.receiptNumber || receiptNumber || undefined,
         receiptAttachment: receiptAttachment || undefined,
         mpesaMessage: mpesaMessage || undefined,
+        taxRate: Number(taxRateInput) || 0,
+        analyticAccount: analyticAccountInput.trim() || undefined,
         merchant: fields.merchant || fields.payeeName || payeeNameInput || 'Business Expense',
         payeeName: fields.payeeName || payeeNameInput || fields.merchant || 'Business Expense',
         payeePhone: fields.payeePhone || payeePhoneInput || undefined,
@@ -707,64 +739,324 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     </main>
   );
 
-  const transactions = (items: Expense[], review = false) => (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Expense</TableHead>
-          <TableHead>Payee</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Submitted by</TableHead>
-          <TableHead>Date</TableHead>
-          <TableHead className="numeric">Amount</TableHead>
-          <TableHead>Status</TableHead>
-          {review ? <TableHead>Review</TableHead> : <TableHead>Action</TableHead>}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {items.map(e => (
-          <TableRow key={e.id}>
-            <TableCell>
-              <button className="merchant" onClick={() => open('details', e)}>
-                <span className="merchant-icon" style={{ background: palettes[Math.max(business?.categories.indexOf(e.category) || 0, 0) % 6] + '15', color: palettes[Math.max(business?.categories.indexOf(e.category) || 0, 0) % 6] }}>{e.merchant.slice(0, 1)}</span>
-                <span>{e.merchant}<small>EXP-{e.id.slice(-5).toUpperCase()}</small></span>
+  const toggleSelectExpense = (id: string) => {
+    setSelectedExpenseIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const renderExpenseRow = (e: Expense, review = false, allowSelect = false) => {
+    const isDup = business ? isDuplicateExpense(business.expenses, e) : false;
+    const canBatch = allowSelect && e.status === 'pending' && canReview && (canAdmin || e.submittedBy !== data.email);
+    return (
+      <TableRow key={e.id} className={selectedExpenseIds.includes(e.id) ? 'odoo-row-selected' : ''}>
+        {allowSelect ? (
+          <TableCell style={{ width: 36, paddingRight: 0 }}>
+            {canBatch ? (
+              <input
+                type="checkbox"
+                className="odoo-checkbox"
+                aria-label={`Select ${e.merchant}`}
+                checked={selectedExpenseIds.includes(e.id)}
+                onChange={() => toggleSelectExpense(e.id)}
+              />
+            ) : null}
+          </TableCell>
+        ) : null}
+        <TableCell>
+          <button className="merchant" onClick={() => open('details', e)}>
+            <span className="merchant-icon" style={{ background: palettes[Math.max(business?.categories.indexOf(e.category) || 0, 0) % 6] + '15', color: palettes[Math.max(business?.categories.indexOf(e.category) || 0, 0) % 6] }}>{e.merchant.slice(0, 1)}</span>
+            <span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {e.merchant}
+                {isDup ? <span className="odoo-dup-badge" title="Potential duplicate expense detected">Duplicate?</span> : null}
+              </span>
+              <small style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <span>{e.reference || `EXP-${e.id.slice(-5).toUpperCase()}`}</span>
+                {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
+                {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
+                {e.notes && e.notes.length > 1 ? <span className="odoo-chatter-count"><MessageSquare size={10} /> {e.notes.length}</span> : null}
+              </small>
+            </span>
+          </button>
+        </TableCell>
+        <TableCell><span className="category-label">{payeeName(e)}<small>{payeePhone(e)}</small></span></TableCell>
+        <TableCell><span className="category-label">{e.category}</span></TableCell>
+        <TableCell>{nameOf(e.submittedBy)}</TableCell>
+        <TableCell className="muted nowrap">{shortDate(e.date)}</TableCell>
+        <TableCell className="numeric amount">{money(e.amount, business?.currency)}</TableCell>
+        <TableCell><Status status={e.status} /></TableCell>
+        {review ? (
+          <TableCell>
+            {e.submittedBy === data.email && !canAdmin ? (
+              <small className="muted">Needs another reviewer</small>
+            ) : canReview ? (
+              <div className="review-actions">
+                <button disabled={busy || business?.suspended} aria-label={`Approve ${e.merchant}`} title="Approve expense" onClick={() => void act({ action: 'review', expenseId: e.id, status: 'approved' })}><Check size={17} /></button>
+                <button disabled={busy || business?.suspended} aria-label={`Reject ${e.merchant}`} title="Reject expense" onClick={() => open('reject', e)}><X size={17} /></button>
+              </div>
+            ) : null}
+          </TableCell>
+        ) : (
+          <TableCell>
+            {e.status === 'pending' && (e.submittedBy === data.email || canAdmin) ? (
+              <button className="text-button" disabled={busy || business?.suspended} title="Cancel pending expense" onClick={() => void act({ action: 'cancelExpense', expenseId: e.id })} style={{ color: '#dc2626' }}>
+                Cancel
               </button>
-            </TableCell>
-            <TableCell><span className="category-label">{payeeName(e)}<small>{payeePhone(e)}</small></span></TableCell>
-            <TableCell><span className="category-label">{e.category}</span></TableCell>
-            <TableCell>{nameOf(e.submittedBy)}</TableCell>
-            <TableCell className="muted nowrap">{shortDate(e.date)}</TableCell>
-            <TableCell className="numeric amount">{money(e.amount, business?.currency)}</TableCell>
-            <TableCell><Status status={e.status} /></TableCell>
-            {review ? (
-              <TableCell>
-                {e.submittedBy === data.email && !canAdmin ? (
-                  <small className="muted">Needs another reviewer</small>
-                ) : canReview ? (
-                  <div className="review-actions">
-                    <button disabled={busy || business?.suspended} aria-label={`Approve ${e.merchant}`} title="Approve expense" onClick={() => void act({ action: 'review', expenseId: e.id, status: 'approved' })}><Check size={17} /></button>
-                    <button disabled={busy || business?.suspended} aria-label={`Reject ${e.merchant}`} title="Reject expense" onClick={() => open('reject', e)}><X size={17} /></button>
-                  </div>
-                ) : null}
-              </TableCell>
             ) : (
-              <TableCell>
-                {e.status === 'pending' && (e.submittedBy === data.email || canAdmin) ? (
-                  <button className="text-button" disabled={busy || business?.suspended} title="Cancel pending expense" onClick={() => void act({ action: 'cancelExpense', expenseId: e.id })} style={{ color: '#dc2626' }}>
-                    Cancel
-                  </button>
-                ) : (
-                  <button className="text-button" onClick={() => open('details', e)}>
-                    Details
-                  </button>
-                )}
-              </TableCell>
+              <button className="text-button" onClick={() => open('details', e)}>
+                Details
+              </button>
             )}
+          </TableCell>
+        )}
+      </TableRow>
+    );
+  };
+
+  const transactions = (items: Expense[], review = false, allowSelect = false) => {
+    const selectableItems = allowSelect ? items.filter(e => e.status === 'pending' && canReview && (canAdmin || e.submittedBy !== data.email)) : [];
+    const allSelected = selectableItems.length > 0 && selectableItems.every(e => selectedExpenseIds.includes(e.id));
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {allowSelect ? (
+              <TableHead style={{ width: 36, paddingRight: 0 }}>
+                {selectableItems.length > 0 ? (
+                  <input
+                    type="checkbox"
+                    className="odoo-checkbox"
+                    aria-label="Select all reviewable expenses"
+                    checked={allSelected}
+                    onChange={() => {
+                      if (allSelected) {
+                        setSelectedExpenseIds(prev => prev.filter(id => !selectableItems.some(s => s.id === id)));
+                      } else {
+                        setSelectedExpenseIds(prev => Array.from(new Set([...prev, ...selectableItems.map(s => s.id)])));
+                      }
+                    }}
+                  />
+                ) : null}
+              </TableHead>
+            ) : null}
+            <TableHead>Expense</TableHead>
+            <TableHead>Payee</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Submitted by</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead className="numeric">Amount</TableHead>
+            <TableHead>Status</TableHead>
+            {review ? <TableHead>Review</TableHead> : <TableHead>Action</TableHead>}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
+        </TableHeader>
+        <TableBody>
+          {items.map(e => renderExpenseRow(e, review, allowSelect))}
+        </TableBody>
+      </Table>
+    );
+  };
+
+  const getGroupLabel = (e: Expense): string => {
+    if (groupBy === 'category') return e.category || 'Uncategorized';
+    if (groupBy === 'employee') return nameOf(e.submittedBy);
+    if (groupBy === 'status') return e.status === 'pending' ? 'To Approve (Pending)' : e.status === 'approved' ? 'Approved & Posted' : 'Refused (Rejected)';
+    if (groupBy === 'paymentMethod') return e.paymentMethod === 'mpesa' ? 'M-Pesa / Mobile Money' : e.paymentMethod === 'bank' ? 'Bank Transfer' : e.paymentMethod === 'invoice' ? 'Vendor Invoice' : 'Card / Cash';
+    if (groupBy === 'month') return e.date.slice(0, 7);
+    return 'All Expenses';
+  };
+
+  const groupedTransactions = (items: Expense[], review = false) => {
+    if (groupBy === 'none') return transactions(items, review, true);
+    const groups = new Map<string, Expense[]>();
+    for (const item of items) {
+      const key = getGroupLabel(item);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(item);
+    }
+    return (
+      <div className="odoo-grouped-list">
+        {Array.from(groups.entries()).map(([label, groupItems]) => {
+          const isCollapsed = Boolean(collapsedGroups[label]);
+          const groupTotal = groupItems.reduce((s, e) => s + e.amount, 0);
+          return (
+            <div key={label} className="odoo-group-block">
+              <button
+                type="button"
+                className="odoo-group-header"
+                onClick={() => setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }))}
+              >
+                <span className="odoo-group-title">
+                  <ChevronDown size={16} style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
+                  <strong>{label}</strong>
+                  <span className="odoo-count-pill">{groupItems.length}</span>
+                </span>
+                <span className="odoo-group-subtotal">{money(groupTotal, business?.currency)}</span>
+              </button>
+              {!isCollapsed ? transactions(groupItems, review, true) : null}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const kanbanBoard = (items: Expense[], review = false) => {
+    const stages: { key: Expense['status']; label: string; dotColor: string }[] = [
+      { key: 'pending', label: 'To Approve', dotColor: '#f59e0b' },
+      { key: 'approved', label: 'Approved & Posted', dotColor: '#10b981' },
+      { key: 'rejected', label: 'Refused', dotColor: '#ef4444' },
+    ];
+    return (
+      <div className="odoo-kanban-board">
+        {stages.map(stage => {
+          const stageItems = items.filter(e => e.status === stage.key);
+          const stageSum = stageItems.reduce((s, e) => s + e.amount, 0);
+          return (
+            <div key={stage.key} className="odoo-kanban-col">
+              <div className="odoo-kanban-col-head">
+                <div className="odoo-kanban-stage-title">
+                  <span className="stage-dot" style={{ background: stage.dotColor }} />
+                  <strong>{stage.label}</strong>
+                  <span className="odoo-count-pill">{stageItems.length}</span>
+                </div>
+                <span className="odoo-kanban-col-total">{money(stageSum, business?.currency)}</span>
+              </div>
+              <div className="odoo-kanban-cards">
+                {stageItems.length === 0 ? (
+                  <div className="odoo-kanban-empty">No {stage.label.toLowerCase()} expenses</div>
+                ) : stageItems.map(e => {
+                  const isDup = business ? isDuplicateExpense(business.expenses, e) : false;
+                  const canApproveCard = e.status === 'pending' && canReview && (canAdmin || e.submittedBy !== data.email);
+                  return (
+                    <div key={e.id} className="odoo-kanban-card" onClick={() => open('details', e)}>
+                      <div className="odoo-kanban-card-top">
+                        <span className="odoo-ref-tag">{e.reference || `EXP-${e.id.slice(-5).toUpperCase()}`}</span>
+                        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                          {isDup ? <span className="odoo-dup-badge">Duplicate?</span> : null}
+                          <span className="odoo-cat-tag">{e.category}</span>
+                        </div>
+                      </div>
+                      <div className="odoo-kanban-card-main">
+                        <strong>{e.merchant}</strong>
+                        <span className="odoo-kanban-amount">{money(e.amount, business?.currency)}</span>
+                      </div>
+                      <p className="odoo-kanban-desc">{e.description}</p>
+                      <div className="odoo-kanban-meta-pills">
+                        {e.paymentMethod ? <span className="odoo-tag-pill">{e.paymentMethod.toUpperCase()}</span> : null}
+                        {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
+                        {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
+                      </div>
+                      <div className="odoo-kanban-card-footer" onClick={ev => ev.stopPropagation()}>
+                        <div className="odoo-kanban-user">
+                          <span className="odoo-mini-avatar">{nameOf(e.submittedBy).slice(0, 2).toUpperCase()}</span>
+                          <span>{nameOf(e.submittedBy)} · {shortDate(e.date)}</span>
+                        </div>
+                        {canApproveCard && (review || page === 'Expenses') ? (
+                          <div className="odoo-kanban-actions">
+                            <button
+                              type="button"
+                              className="approve"
+                              disabled={busy || business?.suspended}
+                              title="Approve"
+                              onClick={() => void act({ action: 'review', expenseId: e.id, status: 'approved' })}
+                            >
+                              <Check size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className="reject"
+                              disabled={busy || business?.suspended}
+                              title="Refuse"
+                              onClick={() => open('reject', e)}
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const pivotView = (items: Expense[]) => {
+    const cats = Array.from(new Set(items.map(e => e.category)));
+    const empMap = new Map<string, { count: number; total: number; approved: number }>();
+    for (const e of items) {
+      const cur = empMap.get(e.submittedBy) || { count: 0, total: 0, approved: 0 };
+      cur.count += 1;
+      cur.total += e.amount;
+      if (e.status === 'approved') cur.approved += e.amount;
+      empMap.set(e.submittedBy, cur);
+    }
+    const maxEmpTotal = Math.max(...Array.from(empMap.values()).map(v => v.total), 1);
+
+    return (
+      <div className="odoo-pivot-wrap">
+        <div className="odoo-pivot-section">
+          <h3><BarChart3 size={16} /> Pivot Analysis: Category × Status</h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Category</TableHead>
+                <TableHead className="numeric">Pending</TableHead>
+                <TableHead className="numeric">Approved</TableHead>
+                <TableHead className="numeric">Refused</TableHead>
+                <TableHead className="numeric">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cats.map(c => {
+                const cItems = items.filter(e => e.category === c);
+                const p = cItems.filter(e => e.status === 'pending').reduce((s, e) => s + e.amount, 0);
+                const a = cItems.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0);
+                const r = cItems.filter(e => e.status === 'rejected').reduce((s, e) => s + e.amount, 0);
+                return (
+                  <TableRow key={c}>
+                    <TableCell><strong>{c}</strong> <small className="muted">({cItems.length})</small></TableCell>
+                    <TableCell className="numeric">{money(p, business?.currency)}</TableCell>
+                    <TableCell className="numeric" style={{ color: '#059669', fontWeight: 700 }}>{money(a, business?.currency)}</TableCell>
+                    <TableCell className="numeric muted">{money(r, business?.currency)}</TableCell>
+                    <TableCell className="numeric amount">{money(p + a + r, business?.currency)}</TableCell>
+                  </TableRow>
+                );
+              })}
+              <TableRow style={{ background: '#f8fafc', fontWeight: 800 }}>
+                <TableCell>Grand Total ({items.length})</TableCell>
+                <TableCell className="numeric">{money(items.filter(e => e.status === 'pending').reduce((s, e) => s + e.amount, 0), business?.currency)}</TableCell>
+                <TableCell className="numeric" style={{ color: '#059669' }}>{money(items.filter(e => e.status === 'approved').reduce((s, e) => s + e.amount, 0), business?.currency)}</TableCell>
+                <TableCell className="numeric">{money(items.filter(e => e.status === 'rejected').reduce((s, e) => s + e.amount, 0), business?.currency)}</TableCell>
+                <TableCell className="numeric amount">{money(items.reduce((s, e) => s + e.amount, 0), business?.currency)}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="odoo-pivot-section">
+          <h3><Users size={16} /> Spend by Employee</h3>
+          <div className="odoo-emp-bars">
+            {Array.from(empMap.entries()).sort((a, b) => b[1].total - a[1].total).map(([emailKey, stats]) => (
+              <div key={emailKey} className="odoo-emp-bar-row">
+                <div className="odoo-emp-bar-info">
+                  <strong>{nameOf(emailKey)}</strong>
+                  <span>{stats.count} claims · {money(stats.total, business?.currency)}</span>
+                </div>
+                <div className="odoo-emp-track">
+                  <div className="odoo-emp-fill" style={{ width: `${Math.round((stats.total / maxEmpTotal) * 100)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -1066,6 +1358,19 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       ]}
                     />
                     <Choice
+                      label="Group by"
+                      value={groupBy}
+                      onChange={v => setGroupBy(v as typeof groupBy)}
+                      options={[
+                        { value: 'none', label: 'Group by: None' },
+                        { value: 'category', label: 'Group: Category' },
+                        { value: 'employee', label: 'Group: Employee' },
+                        { value: 'status', label: 'Group: Stage' },
+                        { value: 'paymentMethod', label: 'Group: Payment' },
+                        { value: 'month', label: 'Group: Month' }
+                      ]}
+                    />
+                    <Choice
                       label="Report grouping"
                       value={reportGroup}
                       onChange={setReportGroup}
@@ -1075,11 +1380,66 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         { value: 'month', label: 'Report by month' }
                       ]}
                     />
+                    <div className="odoo-view-switcher" role="group" aria-label="View mode">
+                      <button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')} title="List View">
+                        <List size={15} />
+                      </button>
+                      <button type="button" className={viewMode === 'kanban' ? 'active' : ''} onClick={() => setViewMode('kanban')} title="Kanban View">
+                        <LayoutGrid size={15} />
+                      </button>
+                      <button type="button" className={viewMode === 'pivot' ? 'active' : ''} onClick={() => setViewMode('pivot')} title="Pivot & Analytics">
+                        <BarChart3 size={15} />
+                      </button>
+                    </div>
                     <button className="secondary" onClick={exportExpenses}><Download size={16} />Export CSV</button>
                     <button className="secondary" onClick={exportExpensesPdf}><Download size={16} />Export PDF</button>
                   </div>
                 </div>
-                {filtered.length ? transactions(filtered, page === 'Approvals') : (
+                {selectedExpenseIds.length > 0 ? (
+                  <div className="odoo-bulk-bar">
+                    <span>
+                      <strong>{selectedExpenseIds.length}</strong> selected ·{' '}
+                      {money(
+                        filtered
+                          .filter(item => selectedExpenseIds.includes(item.id))
+                          .reduce((sum, item) => sum + item.amount, 0),
+                        business.currency
+                      )}
+                    </span>
+                    <div className="odoo-bulk-actions">
+                      {canReview ? (
+                        <>
+                          <button
+                            type="button"
+                            className="primary small"
+                            disabled={busy}
+                            onClick={() => act({ action: 'bulkReview', expenseIds: selectedExpenseIds, status: 'approved' })}
+                          >
+                            <Check size={14} />Approve Selected
+                          </button>
+                          <button
+                            type="button"
+                            className="danger small"
+                            disabled={busy}
+                            onClick={() => act({ action: 'bulkReview', expenseIds: selectedExpenseIds, status: 'rejected', reason: 'Batch refused' })}
+                          >
+                            <X size={14} />Refuse Selected
+                          </button>
+                        </>
+                      ) : null}
+                      <button type="button" className="secondary small" onClick={() => setSelectedExpenseIds([])}>
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {filtered.length ? (
+                  viewMode === 'kanban'
+                    ? kanbanBoard(filtered, page === 'Approvals')
+                    : viewMode === 'pivot'
+                      ? pivotView(filtered)
+                      : groupedTransactions(filtered, page === 'Approvals')
+                ) : (
                   <Empty text={query || categoryFilter !== 'all' ? 'No expenses match your search and filter criteria.' : page === 'Approvals' ? 'All caught up. No expenses are waiting for business approval.' : 'No expenses yet.'} />
                 )}
               </section>
@@ -1760,9 +2120,56 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               </div>
             ) : modal === 'details' && selected ? (
               <div className="expense-detail">
+                {/* Odoo Chevron Statusbar */}
+                <div className="odoo-statusbar">
+                  <div className="odoo-chevron-steps">
+                    <span className="odoo-step done">Submitted</span>
+                    <span className={`odoo-step ${selected.status === 'pending' ? 'active' : 'done'}`}>To Approve</span>
+                    <span className={`odoo-step ${selected.status === 'approved' ? 'active-approved' : selected.status === 'rejected' ? 'active-rejected' : ''}`}>
+                      {selected.status === 'rejected' ? 'Refused' : 'Approved & Posted'}
+                    </span>
+                  </div>
+                  {selected.reference ? <span className="odoo-ref-pill">{selected.reference}</span> : null}
+                </div>
+
+                {/* Odoo Smart Buttons Strip */}
+                <div className="odoo-smart-buttons">
+                  <div className="odoo-smart-btn">
+                    <Briefcase size={15} />
+                    <div>
+                      <strong>{selected.analyticAccount || 'General'}</strong>
+                      <span>Cost Center</span>
+                    </div>
+                  </div>
+                  <div className="odoo-smart-btn">
+                    <Percent size={15} />
+                    <div>
+                      <strong>{selected.taxRate ? `${selected.taxRate}% (${money(selected.taxAmount || 0, business?.currency)})` : '0% VAT'}</strong>
+                      <span>Tax Included</span>
+                    </div>
+                  </div>
+                  <div className="odoo-smart-btn">
+                    <MessageSquare size={15} />
+                    <div>
+                      <strong>{selected.notes?.length || 0}</strong>
+                      <span>Chatter Notes</span>
+                    </div>
+                  </div>
+                </div>
+
+                {business && isDuplicateExpense(business.expenses, selected) ? (
+                  <div className="odoo-dup-banner">
+                    <AlertTriangle size={16} />
+                    <span><strong>Possible Duplicate:</strong> Another expense for {money(selected.amount, business.currency)} to {payeeName(selected)} exists on {shortDate(selected.date)}.</span>
+                  </div>
+                ) : null}
+
                 <div className="detail-amount">{money(selected.amount, business?.currency)}<Status status={selected.status} /></div>
                 <dl>
                   <div><dt>Payee</dt><dd>{payeeName(selected)}</dd></div>
+                  {selected.reference ? <div><dt>Reference</dt><dd>{selected.reference}</dd></div> : null}
+                  {selected.analyticAccount ? <div><dt>Cost Center</dt><dd>{selected.analyticAccount}</dd></div> : null}
+                  {selected.taxRate ? <div><dt>VAT ({selected.taxRate}%)</dt><dd>{money(selected.taxAmount || 0, business?.currency)}</dd></div> : null}
                   {selected.paymentMethod ? <div><dt>Payment method</dt><dd>{selected.paymentMethod === 'mpesa' ? 'M-Pesa / Mobile Money' : selected.paymentMethod === 'bank' ? 'Bank Transfer' : selected.paymentMethod === 'invoice' ? 'Vendor Invoice' : 'Card / Cash'}</dd></div> : null}
                   {selected.receiptNumber ? <div><dt>Receipt / Ref</dt><dd>{selected.receiptNumber}</dd></div> : null}
                   {selected.payeePhone ? <div><dt>Payee contact</dt><dd>{selected.payeePhone}</dd></div> : null}
@@ -1823,6 +2230,53 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     <button className="primary" disabled={busy || business?.suspended} onClick={() => void act({ action: 'review', expenseId: selected.id, status: 'approved' })}>Approve expense</button>
                   </div>
                 ) : null}
+
+                {/* Odoo Chatter */}
+                <div className="odoo-chatter">
+                  <div className="odoo-chatter-head">
+                    <MessageSquare size={15} />
+                    <span>Chatter & Audit Log</span>
+                  </div>
+                  <div className="odoo-chatter-composer">
+                    <input
+                      type="text"
+                      placeholder="Log a note or @mention a teammate…"
+                      value={chatterInput}
+                      onChange={e => setChatterInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' && chatterInput.trim() && !busy) {
+                          e.preventDefault();
+                          void act({ action: 'addExpenseNote', expenseId: selected.id, message: chatterInput });
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="primary small"
+                      disabled={busy || !chatterInput.trim()}
+                      onClick={() => void act({ action: 'addExpenseNote', expenseId: selected.id, message: chatterInput })}
+                    >
+                      <Send size={13} /> Log Note
+                    </button>
+                  </div>
+                  <div className="odoo-chatter-feed">
+                    {(selected.notes && selected.notes.length > 0 ? [...selected.notes].reverse() : [{
+                      id: 'legacy-created',
+                      actor: selected.submittedBy,
+                      message: `Submitted expense for ${money(selected.amount, business?.currency)}`,
+                      date: selected.date,
+                      type: 'system' as const
+                    }]).map(note => (
+                      <div key={note.id} className={`odoo-chatter-item ${note.type === 'note' ? 'comment' : 'system'}`}>
+                        <div className="odoo-chatter-meta">
+                          <strong>{nameOf(note.actor)}</strong>
+                          <time>{new Date(note.date).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}</time>
+                        </div>
+                        <p>{note.message}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             ) : (
               <form onSubmit={submit} className="app-form" key={modal}>
@@ -2146,6 +2600,58 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    {/* Section 3b: ERP Accounting (Tax & Cost Center) */}
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <Briefcase size={16} />
+                        <span>Accounting: Tax & Analytic Cost Center</span>
+                        <em className="optional-tag">ERP</em>
+                      </div>
+                      <div className="form-grid">
+                        <label className="spacious-field">
+                          <span className="field-label">Analytic / Cost Center <em>Optional</em></span>
+                          <input
+                            name="analyticAccount"
+                            maxLength={60}
+                            value={analyticAccountInput}
+                            onChange={e => setAnalyticAccountInput(e.target.value)}
+                            placeholder="e.g. HQ Operations, Sales, Field Travel"
+                          />
+                        </label>
+                        <label className="spacious-field">
+                          <span className="field-label">Included Tax / VAT</span>
+                          <select
+                            name="taxRate"
+                            value={taxRateInput}
+                            onChange={e => setTaxRateInput(e.target.value)}
+                          >
+                            <option value="0">0% (Tax Exempt / No VAT)</option>
+                            <option value="16">16% VAT (Inclusive)</option>
+                            <option value="8">8% VAT (Reduced)</option>
+                          </select>
+                        </label>
+                      </div>
+                      <div className="quick-purpose-row">
+                        <span className="preset-label">Cost centers:</span>
+                        {['HQ Operations', 'Sales & Growth', 'Engineering', 'Field Travel', 'Marketing'].map(cc => (
+                          <button
+                            key={cc}
+                            type="button"
+                            className={`purpose-chip ${analyticAccountInput === cc ? 'active' : ''}`}
+                            onClick={() => setAnalyticAccountInput(cc)}
+                          >
+                            {cc}
+                          </button>
+                        ))}
+                      </div>
+                      {currentAmountCents > 0 && Number(taxRateInput) > 0 ? (
+                        <div className="odoo-tax-preview">
+                          <span>Net amount: <strong>{money(currentAmountCents - Math.round(currentAmountCents * (Number(taxRateInput) / (100 + Number(taxRateInput)))), business?.currency)}</strong></span>
+                          <span>VAT ({taxRateInput}%): <strong>{money(Math.round(currentAmountCents * (Number(taxRateInput) / (100 + Number(taxRateInput)))), business?.currency)}</strong></span>
+                        </div>
+                      ) : null}
                     </div>
 
                     {/* Section 4: Receipt / Invoice Proof Attachment */}

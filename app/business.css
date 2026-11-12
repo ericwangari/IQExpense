@@ -2091,3 +2091,466 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ===== Odoo ERP Extensions (Control Panel, Kanban, Pivot, Statusbar & Chatter) ===== */
+.odoo-view-switcher {
+  display: inline-flex;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.odoo-view-switcher button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  border-right: 1px solid #e2e8f0;
+  transition: background 0.15s, color 0.15s;
+}
+.odoo-view-switcher button:last-child {
+  border-right: none;
+}
+.odoo-view-switcher button:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+.odoo-view-switcher button.active {
+  background: #714b67;
+  color: #ffffff;
+}
+
+.odoo-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #fdf4ff;
+  border: 1px solid #e9d5ff;
+  color: #3b0764;
+  font-size: 13px;
+}
+.odoo-bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button.small {
+  padding: 5px 10px;
+  font-size: 12px;
+  gap: 5px;
+}
+button.danger {
+  background: #dc2626;
+  color: #ffffff;
+  border: 1px solid #b91c1c;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 600;
+}
+button.danger:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.odoo-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #714b67;
+  cursor: pointer;
+}
+.odoo-row-selected {
+  background: #faf5ff !important;
+}
+
+.odoo-dup-badge,
+.odoo-tag-pill,
+.odoo-tax-pill,
+.odoo-chatter-count,
+.odoo-ref-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+.odoo-dup-badge {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+.odoo-tag-pill {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+.odoo-tax-pill {
+  background: #ecfeff;
+  color: #0e7490;
+}
+.odoo-chatter-count {
+  background: #f1f5f9;
+  color: #475569;
+}
+.odoo-ref-pill {
+  background: #f3e8ff;
+  color: #6b21a8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.odoo-grouped-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.odoo-group-block {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.odoo-group-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+.odoo-group-header:hover {
+  background: #f1f5f9;
+}
+.odoo-group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.odoo-group-count {
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+}
+.odoo-group-total {
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+}
+
+.odoo-kanban-board {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 960px) {
+  .odoo-kanban-board {
+    grid-template-columns: 1fr;
+  }
+}
+.odoo-kanban-col {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.odoo-kanban-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 8px;
+  border-bottom: 2px solid #cbd5e1;
+  font-size: 13px;
+}
+.odoo-kanban-col-head.pending {
+  border-bottom-color: #f59e0b;
+}
+.odoo-kanban-col-head.approved {
+  border-bottom-color: #16a34a;
+}
+.odoo-kanban-col-head.rejected {
+  border-bottom-color: #dc2626;
+}
+.odoo-kanban-col-head span {
+  font-size: 12px;
+  color: #475569;
+  font-weight: 600;
+}
+.odoo-kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.odoo-kanban-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+.odoo-kanban-card:hover {
+  border-color: #714b67;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+}
+.odoo-kanban-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.odoo-kanban-card-top strong {
+  font-size: 13.5px;
+  color: #0f172a;
+}
+.odoo-kanban-amount {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: #0f172a;
+  white-space: nowrap;
+}
+.odoo-kanban-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11.5px;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+.odoo-kanban-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.odoo-kanban-tags > * {
+  margin-left: 0;
+}
+.odoo-kanban-actions {
+  display: flex;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #f1f5f9;
+}
+.odoo-kanban-empty {
+  text-align: center;
+  padding: 20px 10px;
+  color: #94a3b8;
+  font-size: 12.5px;
+}
+
+.odoo-pivot-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.odoo-pivot-section h3 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 10px;
+  color: #1e293b;
+}
+.odoo-pivot-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.odoo-pivot-bar-row {
+  display: grid;
+  grid-template-columns: 160px 1fr 120px;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+}
+.odoo-pivot-bar-track {
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.odoo-pivot-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #714b67, #9333ea);
+  border-radius: 999px;
+}
+.odoo-pivot-bar-val {
+  text-align: right;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.odoo-statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.odoo-chevron-steps {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.odoo-step {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  color: #475569;
+}
+.odoo-step.done {
+  background: #f3e8ff;
+  color: #6b21a8;
+}
+.odoo-step.active {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #f59e0b;
+}
+.odoo-step.active-approved {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #22c55e;
+}
+.odoo-step.active-rejected {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #ef4444;
+}
+
+.odoo-smart-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.odoo-smart-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #475569;
+}
+.odoo-smart-btn strong {
+  display: block;
+  font-size: 12.5px;
+  color: #0f172a;
+}
+.odoo-smart-btn span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.odoo-dup-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+
+.odoo-tax-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #ecfeff;
+  border: 1px solid #a5f3fc;
+  color: #155e75;
+  font-size: 12.5px;
+  margin-top: 8px;
+}
+
+.odoo-chatter {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.odoo-chatter-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+  margin-bottom: 10px;
+}
+.odoo-chatter-composer {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.odoo-chatter-composer input {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.odoo-chatter-feed {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.odoo-chatter-item {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border-left: 3px solid #cbd5e1;
+  font-size: 12.5px;
+}
+.odoo-chatter-item.comment {
+  background: #faf5ff;
+  border-left-color: #714b67;
+}
+.odoo-chatter-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #475569;
+  margin-bottom: 3px;
+}
+.odoo-chatter-item p {
+  margin: 0;
+  color: #0f172a;
+}

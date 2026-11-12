@@ -14,7 +14,38 @@ export type Permission =
   | 'export_reports'
   | 'view_audit_trail';
 export type Member = { email: string; name: string; role: Role; walletLimit?: number; accountStatus?: AccountStatus; walletVisible?: boolean; walletVisibilityRequested?: boolean };
-export type Expense = { id: string; merchant: string; description: string; amount: number; category: string; date: string; submittedBy: string; status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reason?: string; reviewNote?: string; payeeName?: string; payeePhone?: string; payeeDetails?: string; paymentMethod?: string; receiptNumber?: string; receiptAttachment?: string; mpesaMessage?: string };
+export type ExpenseNote = {
+  id: string;
+  actor: string;
+  message: string;
+  date: string;
+  type?: 'note' | 'system';
+};
+export type Expense = {
+  id: string;
+  merchant: string;
+  description: string;
+  amount: number;
+  category: string;
+  date: string;
+  submittedBy: string;
+  status: 'pending' | 'approved' | 'rejected';
+  reviewedBy?: string;
+  reason?: string;
+  reviewNote?: string;
+  payeeName?: string;
+  payeePhone?: string;
+  payeeDetails?: string;
+  paymentMethod?: string;
+  receiptNumber?: string;
+  receiptAttachment?: string;
+  mpesaMessage?: string;
+  taxRate?: number;
+  taxAmount?: number;
+  analyticAccount?: string;
+  reference?: string;
+  notes?: ExpenseNote[];
+};
 export type Entry = {
   id: string;
   amount: number;
@@ -46,6 +77,16 @@ export const memberRemaining = (b: Business, email: string) => {
   const limit = b.members.find(m => m.email === email)?.walletLimit;
   return typeof limit === 'number' ? Math.max(limit - memberSpend(b, email) - memberPending(b, email), 0) : null;
 };
+export function isDuplicateExpense(expenses: Expense[], target: Expense): boolean {
+  return expenses.some(
+    e =>
+      e.id !== target.id &&
+      e.amount === target.amount &&
+      e.date === target.date &&
+      e.merchant.trim().toLowerCase() === target.merchant.trim().toLowerCase() &&
+      e.status !== 'rejected'
+  );
+}
 export const rolePermissions: Record<Role, Permission[]> = {
   admin: [
     'submit_expenses', 'track_own_expenses', 'review_expenses',

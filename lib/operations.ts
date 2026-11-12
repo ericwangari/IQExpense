@@ -48,7 +48,32 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const amount=amountValue(input.amount),remaining=memberRemaining(b,email);
       if(remaining!==null&&amount>remaining)throw new RequestError('This expense is above your remaining team wallet allowance.');
       const merchant=required(input.merchant,'merchant or payee name');
-      b.expenses.unshift({id:crypto.randomUUID(),merchant,payeeName:optionalText(input.payeeName,'payee name')||merchant,payeePhone:optionalText(input.payeePhone,'payee phone',40),payeeDetails:optionalText(input.payeeDetails,'payee details',240),paymentMethod:optionalText(input.paymentMethod,'payment method',40),receiptNumber:optionalText(input.receiptNumber,'receipt number',60),receiptAttachment:optionalText(input.receiptAttachment,'receipt attachment',300000),mpesaMessage:optionalText(input.mpesaMessage,'mpesa message',1000),description:required(input.description,'business purpose',500),amount,category,date,submittedBy:email,status:'pending'});
+      const taxRate = typeof input.taxRate === 'number' && Number.isFinite(input.taxRate) && input.taxRate >= 0 && input.taxRate <= 100 ? input.taxRate : undefined;
+      const taxAmount = taxRate ? Math.round((amount * taxRate) / (100 + taxRate)) : undefined;
+      const analyticAccount = optionalText(input.analyticAccount, 'cost center', 80);
+      const reference = `EXP/${new Date().getFullYear()}/${String(b.expenses.length + 1).padStart(4, '0')}`;
+      b.expenses.unshift({
+        id:crypto.randomUUID(),
+        merchant,
+        payeeName:optionalText(input.payeeName,'payee name')||merchant,
+        payeePhone:optionalText(input.payeePhone,'payee phone',40),
+        payeeDetails:optionalText(input.payeeDetails,'payee details',240),
+        paymentMethod:optionalText(input.paymentMethod,'payment method',40),
+        receiptNumber:optionalText(input.receiptNumber,'receipt number',60),
+        receiptAttachment:optionalText(input.receiptAttachment,'receipt attachment',300000),
+        mpesaMessage:optionalText(input.mpesaMessage,'mpesa message',1000),
+        description:required(input.description,'business purpose',500),
+        amount,
+        category,
+        date,
+        submittedBy:email,
+        status:'pending',
+        taxRate,
+        taxAmount,
+        analyticAccount,
+        reference,
+        notes:[{id:crypto.randomUUID(),actor:email,message:'Expense created and submitted for approval.',date:new Date().toISOString(),type:'system'}]
+      });
     } else if(action==='review') {
       if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);
       const expense=b.expenses.find(e=>e.id===input.expenseId);
@@ -56,12 +81,52 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       if(expense.status!=='pending')throw new RequestError('This expense has already been reviewed.',409);
       if(role!=='admin'&&expense.submittedBy===email)throw new RequestError('Another manager, accountant, or business admin must review your own expense.',403);
       if(!['approved','rejected'].includes(String(input.status)))throw new RequestError('Invalid decision.');
+      expense.notes = expense.notes || [];
       if(input.status==='approved') {
         if(balance(b)<expense.amount)throw new RequestError('The wallet has insufficient budget. Ask your business admin to allocate more.');
         b.ledger.unshift({id:crypto.randomUUID(),amount:-expense.amount,note:expense.merchant,actor:email,date:new Date().toISOString(),expenseId:expense.id});
         expense.reviewNote=optionalText(input.reviewNote,'approval note',240);
-      } else expense.reason=required(input.reason,'rejection reason',500);
+        expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Approved and posted to company wallet.${expense.reviewNote ? ` Note: ${expense.reviewNote}` : ''}`,date:new Date().toISOString(),type:'system'});
+      } else {
+        expense.reason=required(input.reason,'rejection reason',500);
+        expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Refused: ${expense.reason}`,date:new Date().toISOString(),type:'system'});
+      }
       expense.status=input.status as 'approved'|'rejected';expense.reviewedBy=email;
+    } else if(action==='bulkReview') {
+      if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);
+      const ids = Array.isArray(input.expenseIds) ? input.expenseIds.map(String) : [];
+      if(!ids.length)throw new RequestError('Select at least one expense to review.');
+      const status = String(input.status) as 'approved'|'rejected';
+      if(!['approved','rejected'].includes(status))throw new RequestError('Invalid decision.');
+      const reason = status==='rejected' ? required(input.reason,'rejection reason',500) : undefined;
+      const targets = ids.map(id => b.expenses.find(e=>e.id===id)).filter((e): e is NonNullable<typeof e> => Boolean(e && e.status==='pending'));
+      if(!targets.length)throw new RequestError('No pending expenses selected.');
+      for(const expense of targets) {
+        if(role!=='admin'&&expense.submittedBy===email)throw new RequestError('Cannot self-approve your own expense in a bulk batch.',403);
+      }
+      if(status==='approved') {
+        const needed = targets.reduce((s,e)=>s+e.amount,0);
+        if(balance(b)<needed)throw new RequestError('The wallet has insufficient budget to approve all selected expenses.');
+      }
+      for(const expense of targets) {
+        expense.notes = expense.notes || [];
+        if(status==='approved') {
+          b.ledger.unshift({id:crypto.randomUUID(),amount:-expense.amount,note:expense.merchant,actor:email,date:new Date().toISOString(),expenseId:expense.id});
+          expense.notes.push({id:crypto.randomUUID(),actor:email,message:'Batch approved and posted to company wallet.',date:new Date().toISOString(),type:'system'});
+        } else {
+          expense.reason = reason;
+          expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Batch refused: ${reason}`,date:new Date().toISOString(),type:'system'});
+        }
+        expense.status = status;
+        expense.reviewedBy = email;
+      }
+    } else if(action==='addExpenseNote') {
+      const expense=b.expenses.find(e=>e.id===input.expenseId);
+      if(!expense)throw new RequestError('Expense not found.',404);
+      if(expense.submittedBy!==email&&!can(role,'review_expenses')&&!can(role,'view_all_expenses'))throw new RequestError('You do not have permission to post notes on this expense.',403);
+      const message=required(input.message,'note message',500);
+      expense.notes=expense.notes||[];
+      expense.notes.push({id:crypto.randomUUID(),actor:email,message,date:new Date().toISOString(),type:'note'});
     } else if(action==='cancelExpense') {
       const expense=b.expenses.find(e=>e.id===input.expenseId);
       if(!expense)throw new RequestError('Expense not found.',404);
@@ -156,6 +221,8 @@ export function mutate(state: State, email: string, input: Record<string,unknown
   const labels: Record<string,string>={
     submit:`Submitted expense: ${input.merchant}`,
     review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,
+    bulkReview:`Batch ${input.status==='approved'?'approved':'rejected'} ${Array.isArray(input.expenseIds)?input.expenseIds.length:0} expenses`,
+    addExpenseNote:`Posted note on expense ${input.expenseId}`,
     cancelExpense:`Cancelled pending expense ${input.expenseId}`,
     allocate:`Allocated budget: ${input.note}`,
     deposit:`Deposited funds via ${String(input.paymentMethod||'payment').toUpperCase()}${input.reference?` (Ref: ${input.reference})`:''}`,

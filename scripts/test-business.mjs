@@ -7,7 +7,7 @@ for(const name of ['model','operations','demo']){
  writeFileSync(new URL(`${name}.mjs`,out),ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ES2022}}).outputText.replaceAll("'./model'","'./model.mjs'"));
 }
 const {mutate,visibleState}=await import(new URL('operations.mjs',out));
-const {newBusiness,balance,depositTotal,allocationTotal}=await import(new URL('model.mjs',out));
+const {newBusiness,balance,depositTotal,allocationTotal,isDuplicateExpense}=await import(new URL('model.mjs',out));
 const owner='owner@example.com',manager='manager@example.com',employee='employee@example.com';
 const b=newBusiness('Test business','KES',owner),other=newBusiness('Other business','USD','other@example.com');
 b.members.push({email:manager,name:'Manager',role:'manager'},{email:employee,name:'Employee',role:'employee'});
@@ -80,4 +80,57 @@ assert.equal(allocationTotal(b), 100000);
 assert.ok(b.audit.some(a=>a.action.includes('Deposited funds via MPESA')));
 checks++;
 
-console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, and audit.`);
+// Odoo ERP features: VAT tax calculation, analyticAccount, reference, chatter notes, bulkReview, duplicate detection
+run(employee, {
+  action: 'submit',
+  amount: 11600,
+  category: b.categories[0],
+  merchant: 'Safaricom Fiber',
+  description: 'Monthly office internet with VAT',
+  date: '2026-04-06',
+  taxRate: 16,
+  analyticAccount: 'HQ Operations',
+});
+const erpSub = b.expenses[0];
+assert.equal(erpSub.taxRate, 16);
+assert.equal(erpSub.taxAmount, 1600);
+assert.equal(erpSub.analyticAccount, 'HQ Operations');
+assert.ok(erpSub.reference.startsWith('EXP/'));
+assert.equal(erpSub.notes.length, 1);
+checks++;
+
+// Duplicate detection
+run(employee, {
+  action: 'submit',
+  amount: 11600,
+  category: b.categories[0],
+  merchant: 'Safaricom Fiber',
+  description: 'Duplicate bill test',
+  date: '2026-04-06',
+});
+const erpDup = b.expenses[0];
+assert.equal(isDuplicateExpense(b.expenses, erpSub), true);
+assert.equal(isDuplicateExpense(b.expenses, erpDup), true);
+checks++;
+
+// Chatter note
+run(owner, {
+  action: 'addExpenseNote',
+  expenseId: erpSub.id,
+  message: 'Verified invoice number on file.',
+});
+assert.equal(erpSub.notes.length, 2);
+assert.equal(erpSub.notes[1].type, 'note');
+checks++;
+
+// Bulk review
+run(owner, {
+  action: 'bulkReview',
+  expenseIds: [erpSub.id, erpDup.id],
+  status: 'approved',
+});
+assert.equal(erpSub.status, 'approved');
+assert.equal(erpDup.status, 'approved');
+checks++;
+
+console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, Odoo ERP (VAT, cost centers, chatter, bulk review), and audit.`);
