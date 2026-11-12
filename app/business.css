@@ -347,17 +347,21 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   flex-wrap: wrap !important;
   gap: 12px !important;
   align-items: center;
+  max-width: 100%;
 }
 .table-toolbar .searchbox {
-  flex: 1 1 240px;
-  min-width: 210px;
+  flex: 1 1 220px;
+  min-width: 200px;
+  max-width: 100%;
 }
 .table-toolbar .toolbar-right {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  flex: 1 1 auto;
+  min-width: 0;
   max-width: 100%;
 }
 
@@ -2472,7 +2476,13 @@ button.danger:hover:not(:disabled) {
   display: flex;
   flex-direction: column;
   gap: 24px;
-  padding: 4px 22px 24px;
+  padding: 8px 22px 24px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.odoo-pivot-section {
+  max-width: 100%;
+  overflow-x: auto;
 }
 .odoo-pivot-section h3 {
   display: flex;
