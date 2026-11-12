@@ -2073,7 +2073,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
         {/* Dialog Modals */}
         <Dialog open={Boolean(modal)} onOpenChange={v => { if (!v && !busy) setModal(''); }}>
-          <DialogContent className={`app-dialog ${modal === 'expense' ? 'app-dialog-wide' : ''}`}>
+          <DialogContent className={`app-dialog ${modal === 'expense' || modal === 'details' ? 'app-dialog-wide' : ''}`}>
             <DialogHeader>
               <DialogTitle>
                 {{
