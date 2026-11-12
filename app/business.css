@@ -2554,3 +2554,85 @@ button.danger:hover:not(:disabled) {
   margin: 0;
   color: #0f172a;
 }
+
+/* Expense Submission Mode Switcher (Submit Expense vs Request from Admin) */
+.odoo-request-btn {
+  border-color: #d8b4fe !important;
+  color: #6b21a8 !important;
+  background: #faf5ff !important;
+}
+.odoo-request-btn:hover:not(:disabled) {
+  background: #f3e8ff !important;
+}
+
+.odoo-type-switcher {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+@media (max-width: 640px) {
+  .odoo-type-switcher {
+    grid-template-columns: 1fr;
+  }
+}
+.odoo-type-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  color: #475569;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.odoo-type-tab:hover {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+.odoo-type-tab.active {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1e3a8a;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
+}
+.odoo-type-tab.active.request-mode {
+  border-color: #714b67;
+  background: #faf5ff;
+  color: #4c1d95;
+  box-shadow: 0 2px 8px rgba(113, 75, 103, 0.14);
+}
+.odoo-type-tab strong {
+  display: block;
+  font-size: 13.5px;
+  line-height: 1.25;
+}
+.odoo-type-tab span {
+  display: block;
+  font-size: 11.5px;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.odoo-type-pill-request,
+.odoo-type-pill-expense {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.odoo-type-pill-request {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.odoo-type-pill-expense {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid #bae6fd;
+}

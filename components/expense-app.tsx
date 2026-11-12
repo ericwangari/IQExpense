@@ -179,6 +179,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [chatterInput, setChatterInput] = useState<string>('');
   const [taxRateInput, setTaxRateInput] = useState<string>('0');
   const [analyticAccountInput, setAnalyticAccountInput] = useState<string>('');
+  const [expenseType, setExpenseType] = useState<'reimbursement' | 'request'>('reimbursement');
+  const [expenseTypeFilter, setExpenseTypeFilter] = useState<'all' | 'reimbursement' | 'request'>('all');
 
   function handleMpesaSmsPaste(text: string) {
     setMpesaMessage(text);
@@ -363,11 +365,12 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     setQuery('');
     setFilter('all');
     setCategoryFilter('all');
+    setExpenseTypeFilter('all');
     setMemberRoleFilter('all');
     setAuditQuery('');
   }
 
-  function open(name: string, expense: Expense | null = null, member: Member | null = null) {
+  function open(name: string, expense: Expense | null = null, member: Member | null = null, initialExpenseType: 'reimbursement' | 'request' = 'reimbursement') {
     setFormError('');
     setSelected(expense);
     setSelectedMember(member);
@@ -393,6 +396,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       setMpesaMessage('');
       setTaxRateInput('0');
       setAnalyticAccountInput('');
+      setExpenseType(initialExpenseType);
     }
     if (name === 'details') {
       setChatterInput('');
@@ -493,6 +497,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         mpesaMessage: mpesaMessage || undefined,
         taxRate: Number(taxRateInput) || 0,
         analyticAccount: analyticAccountInput.trim() || undefined,
+        expenseType,
         merchant: fields.merchant || fields.payeeName || payeeNameInput || 'Business Expense',
         payeeName: fields.payeeName || payeeNameInput || fields.merchant || 'Business Expense',
         payeePhone: fields.payeePhone || payeePhoneInput || undefined,
@@ -513,9 +518,10 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const filtered = (page === 'Approvals' ? (canReview ? pending : []) : business?.expenses || []).filter(e => {
     const matchesStatus = filter === 'all' || e.status === filter;
     const matchesCategory = categoryFilter === 'all' || e.category === categoryFilter;
+    const matchesType = expenseTypeFilter === 'all' || (e.expenseType || 'reimbursement') === expenseTypeFilter;
     const searchTarget = `${e.merchant} ${payeeName(e)} ${e.payeePhone || ''} ${e.payeeDetails || ''} ${e.category} ${e.description} ${e.submittedBy} ${(e.amount / 100).toFixed(2)}`.toLowerCase();
     const matchesQuery = query === '' || searchTarget.includes(query.toLowerCase());
-    return matchesStatus && matchesCategory && matchesQuery;
+    return matchesStatus && matchesCategory && matchesType && matchesQuery;
   });
 
   // Enhanced Team Member Filtering & Search
@@ -771,6 +777,9 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               </span>
               <small style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span>{e.reference || `EXP-${e.id.slice(-5).toUpperCase()}`}</span>
+                <span className={e.expenseType === 'request' ? 'odoo-type-pill-request' : 'odoo-type-pill-expense'}>
+                  {e.expenseType === 'request' ? 'Admin Request' : 'Expense'}
+                </span>
                 {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
                 {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
                 {e.notes && e.notes.length > 1 ? <span className="odoo-chatter-count"><MessageSquare size={10} /> {e.notes.length}</span> : null}
@@ -942,6 +951,9 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       </div>
                       <p className="odoo-kanban-desc">{e.description}</p>
                       <div className="odoo-kanban-meta-pills">
+                        <span className={e.expenseType === 'request' ? 'odoo-type-pill-request' : 'odoo-type-pill-expense'}>
+                          {e.expenseType === 'request' ? 'Admin Request' : 'Expense'}
+                        </span>
                         {e.paymentMethod ? <span className="odoo-tag-pill">{e.paymentMethod.toUpperCase()}</span> : null}
                         {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
                         {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
@@ -1245,12 +1257,15 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     </button>
                   </div>
                 ) : business && myRole ? (
-                  <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <button className="secondary" disabled={business.suspended} onClick={() => setIsDepositOpen(true)}>
                       <Wallet size={16} />Deposit
                     </button>
-                    <button className="primary" disabled={business.suspended} onClick={() => open('expense')}>
-                      <Plus size={18} />New expense
+                    <button className="secondary odoo-request-btn" disabled={business.suspended} onClick={() => open('expense', null, null, 'request')}>
+                      <Send size={16} />Request from Admin
+                    </button>
+                    <button className="primary" disabled={business.suspended} onClick={() => open('expense', null, null, 'reimbursement')}>
+                      <Plus size={18} />Submit Expense
                     </button>
                   </div>
                 ) : null}
@@ -1348,6 +1363,16 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     ) : (
                       <span className="muted">{reviewable.length} awaiting your review · {pending.length} total pending</span>
                     )}
+                    <Choice
+                      label="Expense type"
+                      value={expenseTypeFilter}
+                      onChange={v => setExpenseTypeFilter(v as typeof expenseTypeFilter)}
+                      options={[
+                        { value: 'all', label: 'All types' },
+                        { value: 'reimbursement', label: 'Submitted Expenses' },
+                        { value: 'request', label: 'Admin Requests' }
+                      ]}
+                    />
                     <Choice
                       label="Category filter"
                       value={categoryFilter}
@@ -2083,7 +2108,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             <DialogHeader>
               <DialogTitle>
                 {{
-                  expense: 'Submit an expense',
+                  expense: expenseType === 'request' ? 'Request expense from admin' : 'Submit an expense',
                   allocate: 'Allocate wallet budget',
                   category: 'New expense category',
                   member: selectedMember ? `Update ${selectedMember.name}` : 'Add team member',
@@ -2097,7 +2122,9 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               </DialogTitle>
               <DialogDescription>
                 {{
-                  expense: 'Give your reviewer the details they need to approve this expense.',
+                  expense: expenseType === 'request'
+                    ? 'Request pre-approval or funds disbursement from your business admin.'
+                    : 'Log an already-incurred expense with receipt or M-Pesa proof for approval.',
                   allocate: 'Record an internal budget allocation. This does not move real money.',
                   category: 'Create a category that matches your business spending.',
                   member: selectedMember ? 'Adjust member role, access status, and monthly wallet limit.' : 'Grant access by sign-in email. No invitation email will be sent.',
@@ -2282,6 +2309,36 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               <form onSubmit={submit} className="app-form" key={modal}>
                 {modal === 'expense' ? (
                   <>
+                    {/* Mode Switcher: Submit Expense vs Request from Admin */}
+                    <div className="odoo-type-switcher" role="tablist" aria-label="Expense submission mode">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={expenseType === 'reimbursement'}
+                        className={`odoo-type-tab ${expenseType === 'reimbursement' ? 'active' : ''}`}
+                        onClick={() => setExpenseType('reimbursement')}
+                      >
+                        <Receipt size={17} />
+                        <div>
+                          <strong>Submit Expense</strong>
+                          <span>Already paid · attach receipt or M-Pesa SMS</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={expenseType === 'request'}
+                        className={`odoo-type-tab ${expenseType === 'request' ? 'active request-mode' : ''}`}
+                        onClick={() => setExpenseType('request')}
+                      >
+                        <Send size={17} />
+                        <div>
+                          <strong>Request from Admin</strong>
+                          <span>Need funds or pre-approval before spending</span>
+                        </div>
+                      </button>
+                    </div>
+
                     {/* Live Allowance & Budget Status */}
                     {allowance !== null ? (
                       <div className={`expense-budget-banner ${currentNumAmount > 0 && allowance - currentAmountCents < 0 ? 'over-budget' : ''}`}>
@@ -2817,7 +2874,9 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 <div className="form-actions">
                   <button className="secondary" type="button" disabled={busy} onClick={() => setModal('')}>Cancel</button>
                   <button className="primary" disabled={busy} type="submit">
-                    {busy ? 'Saving…' : { expense: 'Submit for approval', allocate: 'Allocate budget', category: 'Create category', member: 'Save team member', business: 'Submit registration', reject: 'Reject expense', rejectBusiness: 'Reject registration', approveWithNote: 'Confirm approval' }[modal]}
+                    {busy ? 'Saving…' : {
+                      expense: expenseType === 'request' ? 'Send Request to Admin' : 'Submit Expense',
+                      allocate: 'Allocate budget', category: 'Create category', member: 'Save team member', business: 'Submit registration', reject: 'Reject expense', rejectBusiness: 'Reject registration', approveWithNote: 'Confirm approval' }[modal]}
                   </button>
                 </div>
               </form>

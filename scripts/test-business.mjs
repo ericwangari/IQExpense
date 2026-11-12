@@ -133,4 +133,19 @@ assert.equal(erpSub.status, 'approved');
 assert.equal(erpDup.status, 'approved');
 checks++;
 
+// Admin expense request vs submitted expense
+run(employee, {
+  action: 'submit',
+  expenseType: 'request',
+  amount: 1000,
+  category: b.categories[0],
+  merchant: 'Client Transport Advance',
+  description: 'Requesting upfront transport funds from admin',
+  date: '2026-04-06',
+});
+const reqExp = b.expenses[0];
+assert.equal(reqExp.expenseType, 'request');
+assert.ok(reqExp.reference.startsWith('REQ/'));
+checks++;
+
 console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, Odoo ERP (VAT, cost centers, chatter, bulk review), and audit.`);

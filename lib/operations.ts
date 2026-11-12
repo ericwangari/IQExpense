@@ -51,7 +51,9 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const taxRate = typeof input.taxRate === 'number' && Number.isFinite(input.taxRate) && input.taxRate >= 0 && input.taxRate <= 100 ? input.taxRate : undefined;
       const taxAmount = taxRate ? Math.round((amount * taxRate) / (100 + taxRate)) : undefined;
       const analyticAccount = optionalText(input.analyticAccount, 'cost center', 80);
-      const reference = `EXP/${new Date().getFullYear()}/${String(b.expenses.length + 1).padStart(4, '0')}`;
+      const expenseType = input.expenseType === 'request' ? 'request' : 'reimbursement';
+      const refPrefix = expenseType === 'request' ? 'REQ' : 'EXP';
+      const reference = `${refPrefix}/${new Date().getFullYear()}/${String(b.expenses.length + 1).padStart(4, '0')}`;
       b.expenses.unshift({
         id:crypto.randomUUID(),
         merchant,
@@ -72,7 +74,8 @@ export function mutate(state: State, email: string, input: Record<string,unknown
         taxAmount,
         analyticAccount,
         reference,
-        notes:[{id:crypto.randomUUID(),actor:email,message:'Expense created and submitted for approval.',date:new Date().toISOString(),type:'system'}]
+        expenseType,
+        notes:[{id:crypto.randomUUID(),actor:email,message:expenseType==='request'?'Expense request sent to admin for approval & disbursement.':'Expense created and submitted for approval.',date:new Date().toISOString(),type:'system'}]
       });
     } else if(action==='review') {
       if(!can(role,'review_expenses'))throw new RequestError('A manager or business admin must review expenses.',403);

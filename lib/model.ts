@@ -44,6 +44,7 @@ export type Expense = {
   taxAmount?: number;
   analyticAccount?: string;
   reference?: string;
+  expenseType?: 'reimbursement' | 'request';
   notes?: ExpenseNote[];
 };
 export type Entry = {
