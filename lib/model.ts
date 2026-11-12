@@ -45,6 +45,8 @@ export type Expense = {
   analyticAccount?: string;
   reference?: string;
   expenseType?: 'reimbursement' | 'request';
+  proofStatus?: 'pending_proof' | 'proof_submitted';
+  proofSubmittedAt?: string;
   notes?: ExpenseNote[];
 };
 export type Entry = {

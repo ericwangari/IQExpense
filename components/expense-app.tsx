@@ -342,6 +342,9 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const pending = business?.expenses.filter(e => e.status === 'pending') || [];
   const reviewable = pending.filter(e => canAdmin || e.submittedBy !== data?.email);
   const approved = business?.expenses.filter(e => e.status === 'approved') || [];
+  const needsProof = business?.expenses.filter(
+    e => e.submittedBy === data?.email && e.expenseType === 'request' && e.status === 'approved' && e.proofStatus === 'pending_proof'
+  ) || [];
 
   const spend = approved.reduce((s, e) => s + e.amount, 0);
   const pendingTotal = pending.reduce((s, e) => s + e.amount, 0);
@@ -396,6 +399,13 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       setAnalyticAccountInput('');
       setExpenseType(initialExpenseType);
     }
+    if (name === 'submitProof' && expense) {
+      setReceiptNumber(expense.receiptNumber || '');
+      setReceiptAttachment(expense.receiptAttachment || '');
+      setReceiptFileName('');
+      setMpesaMessage(expense.mpesaMessage || '');
+      setPayeeDetailsInput(expense.payeeDetails || '');
+    }
     if (name === 'details') {
       setChatterInput('');
     }
@@ -439,6 +449,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
         payload.action === 'deposit' ? 'Funds deposited successfully' :
         payload.action === 'review' ? 'Expense decision recorded' :
         payload.action === 'bulkReview' ? 'Batch expense review completed' :
+        payload.action === 'submitProof' ? 'Payment record submitted for transparency' :
         payload.action === 'addExpenseNote' ? 'Note posted to chatter' :
         payload.action === 'cancelExpense' ? 'Pending expense cancelled' :
         payload.action === 'deleteCategory' ? 'Category removed' :
@@ -507,6 +518,14 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       modal === 'business' ? { action: 'registerBusiness', ...fields, currency } :
       modal === 'rejectBusiness' ? { action: 'reviewBusiness', businessId: activeId, status: 'rejected', ...fields } :
       modal === 'approveWithNote' ? { action: 'review', expenseId: selected?.id, status: 'approved', reviewNote: fields.reviewNote } :
+      modal === 'submitProof' ? {
+        action: 'submitProof',
+        expenseId: selected?.id,
+        receiptNumber: receiptNumber || undefined,
+        receiptAttachment: receiptAttachment || undefined,
+        mpesaMessage: mpesaMessage || undefined,
+        payeeDetails: payeeDetailsInput || undefined,
+      } :
       { action: 'review', expenseId: selected?.id, status: 'rejected', ...fields };
 
     void act(payload);
@@ -778,6 +797,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 <span className={e.expenseType === 'request' ? 'odoo-type-pill-request' : 'odoo-type-pill-expense'}>
                   {e.expenseType === 'request' ? 'Admin Request' : 'Expense'}
                 </span>
+                {e.proofStatus === 'pending_proof' ? <span className="odoo-proof-needed-pill">Proof Needed</span> : null}
+                {e.proofStatus === 'proof_submitted' ? <span className="odoo-proof-ok-pill">Proof Verified</span> : null}
                 {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
                 {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
                 {e.notes && e.notes.length > 1 ? <span className="odoo-chatter-count"><MessageSquare size={10} /> {e.notes.length}</span> : null}
@@ -807,6 +828,10 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             {e.status === 'pending' && (e.submittedBy === data.email || canAdmin) ? (
               <button className="text-button" disabled={busy || business?.suspended} title="Cancel pending expense" onClick={() => void act({ action: 'cancelExpense', expenseId: e.id })} style={{ color: '#dc2626' }}>
                 Cancel
+              </button>
+            ) : e.expenseType === 'request' && e.status === 'approved' && e.proofStatus === 'pending_proof' && (e.submittedBy === data.email || canAdmin) ? (
+              <button className="text-button" disabled={busy || business?.suspended} onClick={() => open('submitProof', e)} style={{ color: '#b45309', fontWeight: 700 }}>
+                Submit Proof
               </button>
             ) : (
               <button className="text-button" onClick={() => open('details', e)}>
@@ -952,6 +977,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         <span className={e.expenseType === 'request' ? 'odoo-type-pill-request' : 'odoo-type-pill-expense'}>
                           {e.expenseType === 'request' ? 'Admin Request' : 'Expense'}
                         </span>
+                        {e.proofStatus === 'pending_proof' ? <span className="odoo-proof-needed-pill">Proof Needed</span> : null}
+                        {e.proofStatus === 'proof_submitted' ? <span className="odoo-proof-ok-pill">Proof Verified</span> : null}
                         {e.paymentMethod ? <span className="odoo-tag-pill">{e.paymentMethod.toUpperCase()}</span> : null}
                         {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
                         {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
@@ -1260,6 +1287,18 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             {preview ? <div className="notice">Local preview · Demo data. Production starts empty and persists in Supabase.</div> : null}
 
             {business?.suspended && !platformOnly ? <div className="notice warning">This business is suspended. Expense submissions and changes are paused.</div> : null}
+            {business && !platformOnly && needsProof.length > 0 && ['Overview', 'Expenses'].includes(page) ? (
+              <div className="approval-banner warning-banner">
+                <div className="approval-symbol"><Receipt size={22} /></div>
+                <div>
+                  <strong>Payment record requested ({needsProof.length})</strong>
+                  <p>Admin approved your request for <strong>{needsProof[0].merchant}</strong> ({money(needsProof[0].amount, business.currency)}). Submit your receipt, M-Pesa SMS, or transaction code for expense tracking and transparency.</p>
+                </div>
+                <button className="primary" onClick={() => open('submitProof', needsProof[0])}>
+                  Submit Payment Record <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : null}
             {!business && !platformOnly ? <Empty text="You do not belong to a business yet. Ask a business admin to add your sign-in email." /> : null}
 
             {/* Standard Business Workspace Views */}
@@ -2073,7 +2112,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
         {/* Dialog Modals */}
         <Dialog open={Boolean(modal)} onOpenChange={v => { if (!v && !busy) setModal(''); }}>
-          <DialogContent className={`app-dialog ${modal === 'expense' || modal === 'details' ? 'app-dialog-wide' : ''}`}>
+          <DialogContent className={`app-dialog ${modal === 'expense' || modal === 'details' || modal === 'submitProof' ? 'app-dialog-wide' : ''}`}>
             <DialogHeader>
               <DialogTitle>
                 {{
@@ -2085,6 +2124,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   reject: 'Reject expense',
                   rejectBusiness: 'Reject business registration',
                   approveWithNote: 'Approve expense with note',
+                  submitProof: 'Submit payment record for transparency',
                   details: selected?.merchant || 'Expense details',
                   help: 'How your workspace works'
                 }[modal]}
@@ -2101,6 +2141,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   reject: 'Tell the submitter why this expense cannot be approved.',
                   rejectBusiness: 'Tell the business admin why this registration cannot be approved yet.',
                   approveWithNote: 'Optional note to attach to this approved expense.',
+                  submitProof: selected ? `Attach receipt, M-Pesa SMS, or transaction code for ${selected.merchant} (${money(selected.amount, business?.currency)}).` : 'Submit payment proof for your approved request.',
                   details: 'Expense details, payee contacts, and approval history.',
                   help: 'From expense submission to an accountable decision.'
                 }[modal]}
@@ -2124,9 +2165,28 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     <span className={`odoo-step ${selected.status === 'approved' ? 'active-approved' : selected.status === 'rejected' ? 'active-rejected' : ''}`}>
                       {selected.status === 'rejected' ? 'Refused' : 'Approved & Posted'}
                     </span>
+                    {selected.expenseType === 'request' && selected.status === 'approved' ? (
+                      <span className={`odoo-step ${selected.proofStatus === 'proof_submitted' ? 'active-approved' : 'active'}`}>
+                        {selected.proofStatus === 'proof_submitted' ? 'Proof Verified' : 'Proof Needed'}
+                      </span>
+                    ) : null}
                   </div>
                   {selected.reference ? <span className="odoo-ref-pill">{selected.reference}</span> : null}
                 </div>
+
+                {selected.expenseType === 'request' && selected.status === 'approved' && selected.proofStatus === 'pending_proof' ? (
+                  <div className="odoo-proof-banner">
+                    <div>
+                      <strong>Payment Record Requested for Transparency</strong>
+                      <p>Admin approved this request. {selected.submittedBy === data.email || canAdmin ? 'Please submit the receipt, M-Pesa confirmation SMS, or payment reference code.' : `Waiting for ${nameOf(selected.submittedBy)} to attach payment proof.`}</p>
+                    </div>
+                    {(selected.submittedBy === data.email || canAdmin) ? (
+                      <button type="button" className="primary small" onClick={() => open('submitProof', selected)}>
+                        <Paperclip size={14} /> Submit Payment Record
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {/* Odoo Smart Buttons Strip */}
                 <div className="odoo-smart-buttons">
@@ -2839,12 +2899,96 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   </label>
                 ) : null}
 
+                {modal === 'submitProof' && selected ? (
+                  <>
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <Smartphone size={16} />
+                        <span>Paste M-Pesa Confirmation SMS</span>
+                        <em className="optional-tag">Auto-extracts code</em>
+                      </div>
+                      <textarea
+                        rows={3}
+                        value={mpesaMessage}
+                        onChange={e => handleMpesaSmsPaste(e.target.value)}
+                        placeholder="Paste the M-Pesa SMS confirmation message here (e.g. QK87X492A Confirmed. Ksh2,500.00 paid to...)"
+                      />
+                    </div>
+                    <div className="form-grid">
+                      <label className="spacious-field">
+                        <span className="field-label">Receipt / Transaction Code <em>Optional if attaching file/SMS</em></span>
+                        <input
+                          value={receiptNumber}
+                          maxLength={60}
+                          onChange={e => setReceiptNumber(e.target.value)}
+                          placeholder="e.g. QK87X492A or INV-2026-041"
+                        />
+                      </label>
+                      <label className="spacious-field">
+                        <span className="field-label">Transparency Note <em>Optional</em></span>
+                        <input
+                          value={payeeDetailsInput}
+                          maxLength={240}
+                          onChange={e => setPayeeDetailsInput(e.target.value)}
+                          placeholder="e.g. Paid vendor in full via Till 445522"
+                        />
+                      </label>
+                    </div>
+                    <div className="expense-section-card">
+                      <div className="section-title">
+                        <Paperclip size={16} />
+                        <span>Upload Receipt / Invoice Photo or PDF</span>
+                        <em className="optional-tag">Max 2MB</em>
+                      </div>
+                      {receiptAttachment ? (
+                        <div className="attached-file-preview">
+                          <div className="attached-file-info">
+                            <FileText size={20} />
+                            <div>
+                              <strong>{receiptFileName || 'Payment proof attached'}</strong>
+                              <small>Ready to submit for transparency audit</small>
+                            </div>
+                          </div>
+                          <button type="button" className="remove-attachment-btn" onClick={() => { setReceiptAttachment(''); setReceiptFileName(''); }}>
+                            <X size={14} /> Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="receipt-upload-dropzone">
+                          <input
+                            type="file"
+                            accept="image/*,application/pdf"
+                            className="hidden-file-input"
+                            onChange={e => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 2 * 1024 * 1024) {
+                                toast.error('File size must be under 2MB.');
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = ev => {
+                                setReceiptAttachment(ev.target?.result as string || '');
+                                setReceiptFileName(file.name);
+                                toast.success(`Attached ${file.name}`);
+                              };
+                              reader.readAsDataURL(file);
+                            }}
+                          />
+                          <span>Click to upload receipt image or PDF</span>
+                        </label>
+                      )}
+                    </div>
+                  </>
+                ) : null}
+
                 {formError ? <p className="form-error" role="alert">{formError}</p> : null}
                 <div className="form-actions">
                   <button className="secondary" type="button" disabled={busy} onClick={() => setModal('')}>Cancel</button>
                   <button className="primary" disabled={busy} type="submit">
                     {busy ? 'Saving…' : {
                       expense: expenseType === 'request' ? 'Send Request to Admin' : 'Submit Expense',
+                      submitProof: 'Submit Payment Record',
                       allocate: 'Allocate budget', category: 'Create category', member: 'Save team member', business: 'Submit registration', reject: 'Reject expense', rejectBusiness: 'Reject registration', approveWithNote: 'Confirm approval' }[modal]}
                   </button>
                 </div>

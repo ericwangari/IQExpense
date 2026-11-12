@@ -148,4 +148,22 @@ assert.equal(reqExp.expenseType, 'request');
 assert.ok(reqExp.reference.startsWith('REQ/'));
 checks++;
 
+// Approving an admin request immediately flags it as needing payment proof from requester
+run(owner, { action: 'review', expenseId: reqExp.id, status: 'approved' });
+assert.equal(reqExp.status, 'approved');
+assert.equal(reqExp.proofStatus, 'pending_proof');
+checks++;
+
+// Requester submits payment record for tracking & transparency
+run(employee, {
+  action: 'submitProof',
+  expenseId: reqExp.id,
+  receiptNumber: 'QK99887766',
+  mpesaMessage: 'QK99887766 Confirmed. Ksh10.00 paid to Client Transport on 6/4/26.',
+});
+assert.equal(reqExp.proofStatus, 'proof_submitted');
+assert.equal(reqExp.receiptNumber, 'QK99887766');
+assert.ok(reqExp.proofSubmittedAt);
+checks++;
+
 console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, Odoo ERP (VAT, cost centers, chatter, bulk review), and audit.`);

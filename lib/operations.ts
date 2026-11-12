@@ -89,7 +89,12 @@ export function mutate(state: State, email: string, input: Record<string,unknown
         if(balance(b)<expense.amount)throw new RequestError('The wallet has insufficient budget. Ask your business admin to allocate more.');
         b.ledger.unshift({id:crypto.randomUUID(),amount:-expense.amount,note:expense.merchant,actor:email,date:new Date().toISOString(),expenseId:expense.id});
         expense.reviewNote=optionalText(input.reviewNote,'approval note',240);
-        expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Approved and posted to company wallet.${expense.reviewNote ? ` Note: ${expense.reviewNote}` : ''}`,date:new Date().toISOString(),type:'system'});
+        if(expense.expenseType==='request') {
+          expense.proofStatus='pending_proof';
+          expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Approved! Submitter is requested to submit payment record / receipt for expense tracking and transparency.${expense.reviewNote ? ` Note: ${expense.reviewNote}` : ''}`,date:new Date().toISOString(),type:'system'});
+        } else {
+          expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Approved and posted to company wallet.${expense.reviewNote ? ` Note: ${expense.reviewNote}` : ''}`,date:new Date().toISOString(),type:'system'});
+        }
       } else {
         expense.reason=required(input.reason,'rejection reason',500);
         expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Refused: ${expense.reason}`,date:new Date().toISOString(),type:'system'});
@@ -115,7 +120,12 @@ export function mutate(state: State, email: string, input: Record<string,unknown
         expense.notes = expense.notes || [];
         if(status==='approved') {
           b.ledger.unshift({id:crypto.randomUUID(),amount:-expense.amount,note:expense.merchant,actor:email,date:new Date().toISOString(),expenseId:expense.id});
-          expense.notes.push({id:crypto.randomUUID(),actor:email,message:'Batch approved and posted to company wallet.',date:new Date().toISOString(),type:'system'});
+          if(expense.expenseType==='request') {
+            expense.proofStatus='pending_proof';
+            expense.notes.push({id:crypto.randomUUID(),actor:email,message:'Batch approved! Submitter is requested to submit payment record / receipt for expense tracking and transparency.',date:new Date().toISOString(),type:'system'});
+          } else {
+            expense.notes.push({id:crypto.randomUUID(),actor:email,message:'Batch approved and posted to company wallet.',date:new Date().toISOString(),type:'system'});
+          }
         } else {
           expense.reason = reason;
           expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Batch refused: ${reason}`,date:new Date().toISOString(),type:'system'});
@@ -123,6 +133,28 @@ export function mutate(state: State, email: string, input: Record<string,unknown
         expense.status = status;
         expense.reviewedBy = email;
       }
+    } else if(action==='submitProof') {
+      const expense=b.expenses.find(e=>e.id===input.expenseId);
+      if(!expense)throw new RequestError('Expense not found.',404);
+      if(expense.submittedBy!==email&&role!=='admin')throw new RequestError('Only the requester or a business admin can submit payment proof.',403);
+      if(expense.expenseType!=='request'||expense.status!=='approved')throw new RequestError('Payment proof can only be submitted for approved admin requests.',400);
+      const receiptAttachment=optionalText(input.receiptAttachment,'receipt attachment',300000);
+      const mpesaMessage=optionalText(input.mpesaMessage,'mpesa message',1000);
+      const receiptNumber=optionalText(input.receiptNumber,'receipt or transaction reference',60);
+      if(!receiptAttachment&&!mpesaMessage&&!receiptNumber)throw new RequestError('Attach a receipt, paste an M-Pesa SMS, or enter a payment reference code.');
+      if(receiptAttachment)expense.receiptAttachment=receiptAttachment;
+      if(mpesaMessage)expense.mpesaMessage=mpesaMessage;
+      if(receiptNumber)expense.receiptNumber=receiptNumber;
+      const paymentMethod=optionalText(input.paymentMethod,'payment method',40);
+      if(paymentMethod)expense.paymentMethod=paymentMethod;
+      const payeePhone=optionalText(input.payeePhone,'payee phone',40);
+      if(payeePhone)expense.payeePhone=payeePhone;
+      const payeeDetails=optionalText(input.payeeDetails,'transparency note',240);
+      if(payeeDetails)expense.payeeDetails=payeeDetails;
+      expense.proofStatus='proof_submitted';
+      expense.proofSubmittedAt=new Date().toISOString();
+      expense.notes=expense.notes||[];
+      expense.notes.push({id:crypto.randomUUID(),actor:email,message:`Payment record submitted for transparency${receiptNumber ? ` (Ref: ${receiptNumber})` : ''}.`,date:new Date().toISOString(),type:'system'});
     } else if(action==='addExpenseNote') {
       const expense=b.expenses.find(e=>e.id===input.expenseId);
       if(!expense)throw new RequestError('Expense not found.',404);
@@ -225,6 +257,7 @@ export function mutate(state: State, email: string, input: Record<string,unknown
     submit:`Submitted expense: ${input.merchant}`,
     review:`${input.status==='approved'?'Approved':'Rejected'} expense ${input.expenseId}${input.reason?`: ${input.reason}`:''}`,
     bulkReview:`Batch ${input.status==='approved'?'approved':'rejected'} ${Array.isArray(input.expenseIds)?input.expenseIds.length:0} expenses`,
+    submitProof:`Submitted payment record for approved request ${input.expenseId}`,
     addExpenseNote:`Posted note on expense ${input.expenseId}`,
     cancelExpense:`Cancelled pending expense ${input.expenseId}`,
     allocate:`Allocated budget: ${input.note}`,
