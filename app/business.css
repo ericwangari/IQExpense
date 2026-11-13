@@ -2814,3 +2814,43 @@ button.danger:hover:not(:disabled) {
   margin: 0;
   color: #7c2d12;
 }
+
+/* Auth Visual: Confidential / Blurred Wallet Balance */
+.wallet-preview-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.wallet-preview-header span {
+  margin-bottom: 0 !important;
+}
+.preview-eye-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #cbd8f4;
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.preview-eye-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.4);
+}
+.blurred-balance {
+  filter: blur(8px);
+  user-select: none;
+  cursor: pointer;
+  display: inline-block;
+  transition: filter 0.25s ease;
+}
+.blurred-balance:hover {
+  filter: blur(4px);
+}

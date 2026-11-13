@@ -13,6 +13,8 @@ import {
   Sparkles,
   Users,
   WalletCards,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { syncAuthCookie } from '@/lib/cookies';
@@ -30,6 +32,7 @@ export default function Login() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showBalance, setShowBalance] = useState(false);
 
   async function signInWithGoogle() {
     setError('');
@@ -120,8 +123,25 @@ export default function Login() {
           </div>
           <div className="wallet-preview-card">
             <div>
-              <span>Available balance</span>
-              <strong>KES 1.24M</strong>
+              <div className="wallet-preview-header">
+                <span>Available balance</span>
+                <button
+                  type="button"
+                  className="preview-eye-btn"
+                  aria-label={showBalance ? "Hide balance" : "Show balance"}
+                  onClick={() => setShowBalance(!showBalance)}
+                  title={showBalance ? "Hide balance" : "Show balance"}
+                >
+                  {showBalance ? <EyeOff size={13} /> : <Eye size={13} />}
+                </button>
+              </div>
+              <strong
+                className={!showBalance ? "blurred-balance" : ""}
+                onClick={() => setShowBalance(!showBalance)}
+                title={showBalance ? "Click to blur" : "Click to reveal"}
+              >
+                KES 1.24M
+              </strong>
             </div>
             <WalletCards size={28} />
           </div>
