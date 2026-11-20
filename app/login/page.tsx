@@ -12,9 +12,9 @@ import {
   ShieldCheck,
   Sparkles,
   Users,
-  WalletCards,
-  Eye,
-  EyeOff,
+  Layers3,
+  Wifi,
+  Activity,
 } from 'lucide-react';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { syncAuthCookie } from '@/lib/cookies';
@@ -32,7 +32,6 @@ export default function Login() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [showBalance, setShowBalance] = useState(false);
 
   async function signInWithGoogle() {
     setError('');
@@ -121,29 +120,74 @@ export default function Login() {
             <span className="live-badge"><span /> Live workspace</span>
             <strong>Business wallet control</strong>
           </div>
-          <div className="wallet-preview-card">
-            <div>
-              <div className="wallet-preview-header">
-                <span>Available balance</span>
-                <button
-                  type="button"
-                  className="preview-eye-btn"
-                  aria-label={showBalance ? "Hide balance" : "Show balance"}
-                  onClick={() => setShowBalance(!showBalance)}
-                  title={showBalance ? "Hide balance" : "Show balance"}
-                >
-                  {showBalance ? <EyeOff size={13} /> : <Eye size={13} />}
-                </button>
+          <div className="corporate-card-widget">
+            <div className="corporate-card-inner">
+              <div className="corporate-card-header">
+                <div className="corporate-card-brand">
+                  <div className="corporate-chip-logo"><Layers3 size={16} /></div>
+                  <div>
+                    <strong>ExpenseIQ Treasury</strong>
+                    <small>Corporate Platinum</small>
+                  </div>
+                </div>
+                <div className="corporate-security-pill">
+                  <LockKeyhole size={11} />
+                  <span>Confidential Vault</span>
+                </div>
               </div>
-              <strong
-                className={!showBalance ? "blurred-balance" : ""}
-                onClick={() => setShowBalance(!showBalance)}
-                title={showBalance ? "Click to blur" : "Click to reveal"}
-              >
-                KES 1.24M
-              </strong>
+
+              <div className="corporate-emv-row">
+                <div className="emv-chip" aria-hidden="true">
+                  <div className="emv-line-1" />
+                  <div className="emv-line-2" />
+                </div>
+                <div className="contactless-icon" title="NFC Contactless & Live Telemetry">
+                  <Wifi size={18} style={{ transform: 'rotate(90deg)' }} />
+                </div>
+              </div>
+
+              <div className="corporate-card-balance-block">
+                <div className="corporate-balance-top">
+                  <span>Available Treasury Limit</span>
+                  <span className="corporate-tier-badge">Active Policy</span>
+                </div>
+                <div className="corporate-masked-balance">
+                  <span className="currency-tag">KES</span>
+                  <span className="masked-dots">• • • • • • • •</span>
+                </div>
+                <div className="corporate-vault-status">
+                  <ShieldCheck size={13} />
+                  <span>Zero-exposure balance protection active</span>
+                </div>
+              </div>
+
+              <div className="corporate-card-footer">
+                <div>
+                  <span className="corporate-footer-label">CARD NUMBER</span>
+                  <span className="corporate-footer-val">••••  ••••  ••••  8492</span>
+                </div>
+                <div className="corporate-footer-right">
+                  <span className="corporate-footer-label">SETTLEMENT</span>
+                  <span className="corporate-currency-pills">KES · USD · EUR · GBP</span>
+                </div>
+              </div>
             </div>
-            <WalletCards size={28} />
+
+            {/* Quick Live Telemetry Badges */}
+            <div className="corporate-telemetry-bar">
+              <div className="telemetry-item">
+                <CheckCircle2 size={13} />
+                <span>Zero-Trust Policy</span>
+              </div>
+              <div className="telemetry-item">
+                <Activity size={13} />
+                <span>Odoo ERP Sync</span>
+              </div>
+              <div className="telemetry-item">
+                <Sparkles size={13} />
+                <span>Real-Time Audit</span>
+              </div>
+            </div>
           </div>
           <div className="preview-list">
             <div><ReceiptText size={18} /><span>Team transport claim</span><strong>Pending</strong></div>

@@ -2815,42 +2815,235 @@ button.danger:hover:not(:disabled) {
   color: #7c2d12;
 }
 
-/* Auth Visual: Confidential / Blurred Wallet Balance */
-.wallet-preview-header {
+/* Corporate Treasury Card & Telemetry Widget (Login Visual) */
+.corporate-card-widget {
+  margin: 20px 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.corporate-card-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  padding: 24px 24px 20px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0.08) 55%, rgba(49, 92, 246, 0.2) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(28px);
+}
+.corporate-card-inner:before {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 170px;
+  height: 170px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(33, 212, 253, 0.35) 0%, transparent 70%);
+  pointer-events: none;
+}
+.corporate-card-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
 }
-.wallet-preview-header span {
-  margin-bottom: 0 !important;
+.corporate-card-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
-.preview-eye-btn {
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  color: #cbd8f4;
-  border-radius: 999px;
-  width: 22px;
-  height: 22px;
-  display: inline-flex;
+.corporate-chip-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
 }
-.preview-eye-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+.corporate-card-brand strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.4);
 }
-.blurred-balance {
-  filter: blur(8px);
-  user-select: none;
-  cursor: pointer;
-  display: inline-block;
-  transition: filter 0.25s ease;
+.corporate-card-brand small {
+  display: block;
+  font-size: 10.5px;
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
 }
-.blurred-balance:hover {
-  filter: blur(4px);
+.corporate-security-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.16);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #6ee7b7;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.corporate-emv-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.emv-chip {
+  width: 40px;
+  height: 30px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fef08a 0%, #ca8a04 50%, #eab308 100%);
+  border: 1px solid rgba(254, 240, 138, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5), 0 2px 6px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+.emv-chip .emv-line-1 {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(161, 98, 7, 0.55);
+}
+.emv-chip .emv-line-2 {
+  position: absolute;
+  left: 45%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(161, 98, 7, 0.55);
+}
+.contactless-icon {
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.corporate-card-balance-block {
+  margin-bottom: 18px;
+  padding: 12px 15px;
+  border-radius: 13px;
+  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+.corporate-balance-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.corporate-balance-top span:first-child {
+  font-size: 11.5px;
+  color: #94a3b8;
+  letter-spacing: 0.02em;
+}
+.corporate-tier-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.15);
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.corporate-masked-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+.corporate-masked-balance .currency-tag {
+  font-size: 16px;
+  font-weight: 800;
+  color: #93c5fd;
+  letter-spacing: 0.04em;
+}
+.corporate-masked-balance .masked-dots {
+  font-size: 22px;
+  letter-spacing: 3px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+}
+.corporate-vault-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: #94a3b8;
+}
+.corporate-vault-status svg {
+  color: #34d399;
+}
+
+.corporate-card-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.corporate-footer-label {
+  display: block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+.corporate-footer-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #e2e8f0;
+}
+.corporate-footer-right {
+  text-align: right;
+}
+.corporate-currency-pills {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.04em;
+}
+
+.corporate-telemetry-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+.telemetry-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 5px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+}
+.telemetry-item svg {
+  color: #38bdf8;
+  flex-shrink: 0;
 }
