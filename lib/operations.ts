@@ -177,14 +177,16 @@ export function mutate(state: State, email: string, input: Record<string,unknown
       const amount=amountValue(input.amount);
       if(!Number.isSafeInteger(balance(b)+amount)||balance(b)+amount>100000000000)throw new RequestError('Wallet budget limit exceeded.');
       const paymentMethod=required(input.paymentMethod||input.method||'mpesa','payment method');
-      if(!['mpesa','card','bank'].includes(paymentMethod))throw new RequestError('Unsupported payment method. Choose M-Pesa, Card, or Bank transfer.');
+      if(!['mpesa','card','bank','paystack'].includes(paymentMethod))throw new RequestError('Unsupported payment method. Choose M-Pesa, Card, or Bank transfer.');
       const reference=optionalText(input.reference,'transaction reference',80)||`DEP-${Date.now().toString(36).toUpperCase()}`;
+      if(b.ledger.some(l=>l.reference===reference))return;
       const phoneNumber=optionalText(input.phoneNumber||input.phone,'phone number',30);
       const cardLast4=optionalText(input.cardLast4,'card digits',4);
       const cardBrand=optionalText(input.cardBrand,'card brand',20);
       const note=optionalText(input.note,'deposit note',160)||
-        (paymentMethod==='mpesa'?`M-Pesa deposit (${reference}${phoneNumber?` from ${phoneNumber}`:''})`:
-         paymentMethod==='card'?`Card deposit (${cardBrand||'Card'}${cardLast4?` •••• ${cardLast4}`:''} Ref: ${reference})`:
+        (paymentMethod==='mpesa'?`M-Pesa deposit via Paystack (${reference}${phoneNumber?` from ${phoneNumber}`:''})`:
+         paymentMethod==='card'?`Card deposit via Paystack (${cardBrand||'Card'}${cardLast4?` •••• ${cardLast4}`:''} Ref: ${reference})`:
+         paymentMethod==='paystack'?`Paystack deposit (Ref: ${reference})`:
          `Bank transfer deposit (Ref: ${reference})`);
       b.ledger.unshift({
         id:crypto.randomUUID(),

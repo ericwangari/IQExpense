@@ -25,13 +25,14 @@ import { Toaster } from '@/components/ui/sonner';
 import { toast } from 'sonner';
 
 import {
-  balance, allocationTotal, can, rolePermissions, memberPending, memberRemaining, memberSpend,
+  balance, allocationTotal, depositTotal, can, rolePermissions, memberPending, memberRemaining, memberSpend,
   canManageMemberRole, platformStats, isDuplicateExpense, type Business, type Expense, type Member, type Role, type View
 } from '@/lib/model';
 import { demoState } from '@/lib/demo';
 import { mutate, visibleState } from '@/lib/operations';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { MobileAppLock } from '@/components/mobile-app-lock';
+import { DepositModal } from '@/components/deposit-modal';
 import { getActiveBusinessCookie, setActiveBusinessCookie, clearActiveBusinessCookie, clearAuthCookie } from '@/lib/cookies';
 import { openCookieSettings } from '@/components/cookie-banner';
 
@@ -155,6 +156,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [accountStatus, setAccountStatus] = useState('invited');
   const [currency, setCurrency] = useState('KES');
   const [demo, setDemo] = useState<ReturnType<typeof demoState> | null>(null);
+  const [isDepositOpen, setIsDepositOpen] = useState(false);
 
   // Enhanced Expense Submission States
   const [expenseAmount, setExpenseAmount] = useState<string>('');
@@ -1208,6 +1210,17 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               ) : (
                 <span className="workspace-status">{business?.suspended ? 'Account suspended' : 'Business workspace'}</span>
               )}
+              {canAdmin && business && !business.suspended && !platformOnly ? (
+                <button
+                  className="topbar-deposit-btn topbar-link"
+                  onClick={() => setIsDepositOpen(true)}
+                  title="Top up business wallet via Paystack"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 8, fontSize: 13 }}
+                >
+                  <Smartphone size={14} />
+                  <span>Top up</span>
+                </button>
+              ) : null}
               {canReview && !platformOnly ? (
                 <button className="notification-pill" onClick={() => navigate('Approvals')} aria-label={`${reviewable.length} pending approvals`}>
                   <Bell size={16} />{reviewable.length}
@@ -1268,9 +1281,14 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 ) : page === 'Categories' && canAdmin ? (
                   <button className="primary" disabled={business?.suspended} onClick={() => open('category')}><Plus size={18} />New category</button>
                 ) : page === 'Wallet' && canAdmin ? (
-                  <button className="primary" disabled={business?.suspended} onClick={() => open('allocate')}>
-                    <Plus size={18} />Allocate budget
-                  </button>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button className="primary topbar-deposit-btn" disabled={business?.suspended} onClick={() => setIsDepositOpen(true)}>
+                      <Smartphone size={18} />Deposit Funds (Paystack)
+                    </button>
+                    <button className="secondary" disabled={business?.suspended} onClick={() => open('allocate')}>
+                      <Plus size={18} />Allocate budget
+                    </button>
+                  </div>
                 ) : business && myRole ? (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <button className="secondary odoo-request-btn" disabled={business.suspended} onClick={() => open('expense', null, null, 'request')}>
@@ -1512,6 +1530,18 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                     <div><Layers3 size={25} /><span>EXPENSEIQ BUSINESS</span></div>
                     <p>Available budget</p>
                     <strong>{money(balance(business), business.currency)}</strong>
+                    {canAdmin ? (
+                      <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                        <button
+                          type="button"
+                          className="wallet-deposit-trigger-btn"
+                          disabled={business.suspended}
+                          onClick={() => setIsDepositOpen(true)}
+                        >
+                          <Smartphone size={15} /> Top up via Paystack (M-Pesa / Card)
+                        </button>
+                      </div>
+                    ) : null}
                     <div className="wallet-card-footer">
                       <span>{business.name}<small>COMPANY WALLET</small></span>
                       <Wallet size={32} />
@@ -1520,6 +1550,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   <section className="panel wallet-summary">
                     <h2>Budget at a glance</h2>
                     <dl>
+                      <div><dt>Deposited funds</dt><dd>{money(depositTotal(business), business.currency)}</dd></div>
                       <div><dt>Internal budget</dt><dd>{money(allocationTotal(business), business.currency)}</dd></div>
                       <div><dt>Approved spending</dt><dd>{money(spend, business.currency)}</dd></div>
                       <div><dt>Pending requests</dt><dd>{money(pendingTotal, business.currency)}</dd></div>
@@ -1530,8 +1561,13 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 </div>
                 <section className="panel">
                   <div className="panel-title">
-                    <div><h2>Wallet activity</h2><p>Internal budget allocations and approved expense deductions</p></div>
+                    <div><h2>Wallet activity</h2><p>Internal budget allocations, Paystack deposits, and approved expense deductions</p></div>
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                      {canAdmin ? (
+                        <button className="primary" onClick={() => setIsDepositOpen(true)} style={{ fontSize: 13, minHeight: 34 }}>
+                          <Smartphone size={14} />Top up wallet
+                        </button>
+                      ) : null}
                       <button className="secondary" onClick={exportLedger} style={{ fontSize: 13, minHeight: 34 }}>
                         <Download size={14} />Export ledger
                       </button>
@@ -2996,6 +3032,20 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             )}
           </DialogContent>
         </Dialog>
+        {business ? (
+          <DepositModal
+            open={isDepositOpen}
+            onOpenChange={setIsDepositOpen}
+            businessId={business.id}
+            businessName={business.name}
+            currency={business.currency}
+            currentBalance={balance(business)}
+            userEmail={data?.email || ''}
+            onSuccess={async (payload) => {
+              await act(payload);
+            }}
+          />
+        ) : null}
         <Toaster position="bottom-right" richColors />
       </SidebarProvider>
     </>

@@ -157,51 +157,63 @@ export function DepositModal({
 
         setLoading(true);
         setStep("processing");
-        setStatusMessage(`Sending M-Pesa STK push prompt to ${formatMpesaPhoneDisplay(normalized)}...`);
+        setStatusMessage(`Connecting to Paystack gateway & sending M-Pesa STK push to ${formatMpesaPhoneDisplay(normalized)}...`);
 
         try {
-          // Trigger STK push through API or direct simulation
-          const res = await fetch("/api/wallet/deposit", {
+          // Initialize Paystack deposit session
+          const res = await fetch("/api/wallet/paystack/initialize", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              method: "mpesa",
               amount: amountCents,
-              phoneNumber: normalized,
+              currency,
               businessId,
               businessName,
-              reference: accountRef,
+              phoneNumber: normalized,
+              channels: ["mobile_money", "card"],
             }),
           });
 
-          const data = (await res.json()) as { error?: string; reference?: string };
-          if (!res.ok) throw new Error(data.error || "STK push initiation failed");
+          const data = (await res.json()) as {
+            error?: string;
+            reference?: string;
+            authorizationUrl?: string;
+            simulated?: boolean;
+          };
+
+          if (!res.ok) throw new Error(data.error || "Paystack STK push initiation failed");
 
           const assignedRef = data.reference || generateMpesaReceiptCode();
-          setStatusMessage(`STK prompt sent to ${formatMpesaPhoneDisplay(normalized)}. Please enter your M-Pesa PIN on your phone to approve.`);
 
-          // Countdown simulation
-          let remaining = 5;
-          setCountdown(remaining);
-          const interval = setInterval(() => {
-            remaining -= 1;
+          if (data.authorizationUrl && typeof window !== "undefined") {
+            setStatusMessage(`Paystack checkout ready. Complete your payment on Paystack...`);
+            window.open(data.authorizationUrl, "_blank", "width=600,height=750");
+            pollPaystackVerification(assignedRef, amountCents, "mpesa", normalized);
+          } else {
+            // Development / preview simulation mode
+            setStatusMessage(`Paystack STK prompt sent to ${formatMpesaPhoneDisplay(normalized)}. Enter your M-Pesa PIN on your phone to complete deposit.`);
+            let remaining = 5;
             setCountdown(remaining);
-            if (remaining <= 0) {
-              clearInterval(interval);
-              completeDeposit({
-                action: "deposit",
-                amount: amountCents,
-                paymentMethod: "mpesa",
-                reference: assignedRef,
-                phoneNumber: normalized,
-                note: `M-Pesa deposit via STK Push (${assignedRef} from ${formatMpesaPhoneDisplay(normalized)})`,
-              });
-            }
-          }, 1000);
+            const interval = setInterval(() => {
+              remaining -= 1;
+              setCountdown(remaining);
+              if (remaining <= 0) {
+                clearInterval(interval);
+                completeDeposit({
+                  action: "deposit",
+                  amount: amountCents,
+                  paymentMethod: "mpesa",
+                  reference: assignedRef,
+                  phoneNumber: normalized,
+                  note: `M-Pesa deposit via Paystack (${assignedRef} from ${formatMpesaPhoneDisplay(normalized)})`,
+                });
+              }
+            }, 1000);
+          }
         } catch (err) {
           setStep("input");
           setLoading(false);
-          const msg = err instanceof Error ? err.message : "Failed to initiate M-Pesa deposit.";
+          const msg = err instanceof Error ? err.message : "Failed to initiate Paystack deposit.";
           setErrorMsg(msg);
           toast.error(msg);
         }
@@ -215,7 +227,7 @@ export function DepositModal({
 
         setLoading(true);
         setStep("processing");
-        setStatusMessage("Verifying M-Pesa confirmation...");
+        setStatusMessage("Verifying M-Pesa confirmation via Paystack...");
 
         setTimeout(() => {
           completeDeposit({
@@ -248,23 +260,58 @@ export function DepositModal({
 
       setLoading(true);
       setStep("processing");
-      setStatusMessage("Connecting to card issuer and verifying 3D Secure...");
+      setStatusMessage("Connecting to Paystack 3D Secure card gateway...");
 
-      setTimeout(() => {
+      try {
+        const res = await fetch("/api/wallet/paystack/initialize", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: amountCents,
+            currency,
+            businessId,
+            businessName,
+            channels: ["card"],
+          }),
+        });
+
+        const data = (await res.json()) as {
+          error?: string;
+          reference?: string;
+          authorizationUrl?: string;
+          simulated?: boolean;
+        };
+
+        if (!res.ok) throw new Error(data.error || "Card initiation failed");
+
         const brand = detectCardBrand(cleanNum).toUpperCase();
         const last4 = cleanNum.slice(-4);
-        const ref = generateDepositReference("CRD");
+        const assignedRef = data.reference || generateDepositReference("CRD");
 
-        completeDeposit({
-          action: "deposit",
-          amount: amountCents,
-          paymentMethod: "card",
-          reference: ref,
-          cardLast4: last4,
-          cardBrand: brand,
-          note: `Card deposit (${brand} •••• ${last4} Ref: ${ref})`,
-        });
-      }, 1500);
+        if (data.authorizationUrl && typeof window !== "undefined") {
+          setStatusMessage("Paystack 3D Secure checkout opened. Verifying card payment...");
+          window.open(data.authorizationUrl, "_blank", "width=600,height=750");
+          pollPaystackVerification(assignedRef, amountCents, "card", undefined, last4, brand);
+        } else {
+          setTimeout(() => {
+            completeDeposit({
+              action: "deposit",
+              amount: amountCents,
+              paymentMethod: "card",
+              reference: assignedRef,
+              cardLast4: last4,
+              cardBrand: brand,
+              note: `Card deposit via Paystack (${brand} •••• ${last4} Ref: ${assignedRef})`,
+            });
+          }, 1500);
+        }
+      } catch (err) {
+        setStep("input");
+        setLoading(false);
+        const msg = err instanceof Error ? err.message : "Failed to initiate card deposit.";
+        setErrorMsg(msg);
+        toast.error(msg);
+      }
     } else if (method === "bank") {
       const ref = (bankRefInput || generateDepositReference("EFT")).trim();
       if (!ref) {
@@ -286,6 +333,52 @@ export function DepositModal({
         });
       }, 1200);
     }
+  }
+
+  function pollPaystackVerification(
+    reference: string,
+    amount: number,
+    methodType: PaymentMethodType,
+    phoneNumber?: string,
+    cardLast4?: string,
+    cardBrand?: string
+  ) {
+    let attempts = 0;
+    const maxAttempts = 35; // 70 seconds
+    const interval = setInterval(async () => {
+      attempts += 1;
+      try {
+        const res = await fetch(
+          `/api/wallet/paystack/verify?reference=${encodeURIComponent(reference)}&businessId=${encodeURIComponent(businessId)}`
+        );
+        if (res.ok) {
+          const data = (await res.json()) as { success?: boolean; status?: string; amount?: number };
+          if (data.success && data.status === "success") {
+            clearInterval(interval);
+            completeDeposit({
+              action: "deposit",
+              amount: data.amount || amount,
+              paymentMethod: methodType,
+              reference,
+              phoneNumber,
+              cardLast4,
+              cardBrand,
+              note: `Paystack deposit verified (${methodType.toUpperCase()} Ref: ${reference})`,
+            });
+            return;
+          }
+        }
+      } catch {
+        // retry next tick
+      }
+
+      if (attempts >= maxAttempts) {
+        clearInterval(interval);
+        setLoading(false);
+        setStep("input");
+        setErrorMsg("Payment verification timed out. If your account was charged, your business wallet will be credited automatically via webhook.");
+      }
+    }, 2000);
   }
 
   async function completeDeposit(payload: {
@@ -345,6 +438,9 @@ export function DepositModal({
               <DialogDescription>
                 Add money to your {businessName} company wallet using instant mobile money, card, or bank transfer.
               </DialogDescription>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, color: "#047857", background: "#ecfdf5", padding: "3px 9px", borderRadius: 6, marginTop: 6, fontWeight: 600, border: "1px solid #a7f3d0" }}>
+                <ShieldCheck size={13} /> Powered by Paystack • CBK Licensed • Safaricom M-Pesa & Card Rails
+              </div>
             </div>
           </div>
         </DialogHeader>

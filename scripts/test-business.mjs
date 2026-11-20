@@ -80,6 +80,14 @@ assert.equal(allocationTotal(b), 100000);
 assert.ok(b.audit.some(a=>a.action.includes('Deposited funds via MPESA')));
 checks++;
 
+// Test Paystack deposit idempotency: repeating the same reference must not double-credit
+const balanceBeforePaystack = balance(b);
+run(owner, { action: 'deposit', amount: 30000, paymentMethod: 'paystack', reference: 'PSTK-TEST-9988' });
+assert.equal(balance(b), balanceBeforePaystack + 30000);
+run(owner, { action: 'deposit', amount: 30000, paymentMethod: 'paystack', reference: 'PSTK-TEST-9988' });
+assert.equal(balance(b), balanceBeforePaystack + 30000); // Idempotent check passed!
+checks++;
+
 // Odoo ERP features: VAT tax calculation, analyticAccount, reference, chatter notes, bulkReview, duplicate detection
 run(employee, {
   action: 'submit',
