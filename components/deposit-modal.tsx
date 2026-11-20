@@ -185,13 +185,18 @@ export function DepositModal({
 
           const assignedRef = data.reference || generateMpesaReceiptCode();
 
-          if (data.authorizationUrl && typeof window !== "undefined") {
-            setStatusMessage(`Paystack checkout ready. Complete your payment on Paystack...`);
-            window.open(data.authorizationUrl, "_blank", "width=600,height=750");
+          if (!data.simulated) {
+            // Live Paystack Gateway: Real money M-Pesa STK push or hosted checkout
+            if (data.authorizationUrl && typeof window !== "undefined") {
+              setStatusMessage("Paystack checkout opened. Complete your payment on Paystack...");
+              window.open(data.authorizationUrl, "_blank", "width=600,height=750");
+            } else {
+              setStatusMessage(`M-Pesa STK push prompt sent to ${formatMpesaPhoneDisplay(normalized)}! Check your phone screen and enter your M-Pesa PIN.`);
+            }
             pollPaystackVerification(assignedRef, amountCents, "mpesa", normalized);
           } else {
             // Development / preview simulation mode
-            setStatusMessage(`Paystack STK prompt sent to ${formatMpesaPhoneDisplay(normalized)}. Enter your M-Pesa PIN on your phone to complete deposit.`);
+            setStatusMessage(`[Simulation Mode] STK prompt sent to ${formatMpesaPhoneDisplay(normalized)}. Simulating M-Pesa PIN approval...`);
             let remaining = 5;
             setCountdown(remaining);
             const interval = setInterval(() => {
@@ -344,7 +349,7 @@ export function DepositModal({
     cardBrand?: string
   ) {
     let attempts = 0;
-    const maxAttempts = 35; // 70 seconds
+    const maxAttempts = 60; // 150 seconds (gives user sufficient time to enter Safaricom M-Pesa PIN)
     const interval = setInterval(async () => {
       attempts += 1;
       try {

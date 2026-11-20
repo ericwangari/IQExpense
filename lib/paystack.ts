@@ -73,6 +73,64 @@ export async function initializePaystackDeposit(params: PaystackInitParams): Pro
   // If live credentials are provided, call Paystack API
   if (secretKey && secretKey.startsWith('sk_')) {
     try {
+      // 1. Direct M-Pesa STK push via Paystack Charge API
+      if (params.phoneNumber && (!params.channels || params.channels.includes('mobile_money'))) {
+        const rawPhone = params.phoneNumber.replace(/\D/g, '');
+        const formattedPhone = rawPhone.startsWith('254')
+          ? `+${rawPhone}`
+          : rawPhone.startsWith('0')
+          ? `+254${rawPhone.slice(1)}`
+          : `+254${rawPhone}`;
+
+        const chargeRes = await fetch('https://api.paystack.co/charge', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${secretKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: params.email,
+            amount: params.amount,
+            currency,
+            reference,
+            mobile_money: {
+              phone: formattedPhone,
+              provider: 'mpesa',
+            },
+            metadata: {
+              businessId: params.businessId,
+              businessName: params.businessName,
+              phoneNumber: formattedPhone,
+              type: 'wallet_deposit',
+              source: 'ExpenseIQ Business',
+            },
+          }),
+          cache: 'no-store',
+        });
+
+        const chargeData = (await chargeRes.json()) as {
+          status: boolean;
+          message: string;
+          data?: {
+            status: string;
+            reference: string;
+            display_text?: string;
+          };
+        };
+
+        if (chargeRes.ok && chargeData.status && chargeData.data) {
+          return {
+            success: true,
+            authorizationUrl: undefined,
+            reference: chargeData.data.reference || reference,
+            message: chargeData.data.display_text || 'Please enter your M-Pesa PIN on your phone to complete payment.',
+            simulated: false,
+          };
+        }
+        // If charge API was not enabled or returned an error, fallback to standard checkout initialization
+      }
+
+      // 2. Standard Paystack Checkout (Card, Bank, or fallback checkout)
       const payload = {
         email: params.email,
         amount: params.amount,
