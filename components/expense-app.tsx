@@ -9,7 +9,7 @@ import {
   Plus, Receipt, Search, ShieldCheck, Tags, Users, Wallet, X, Activity,
   Layers3, RefreshCw, Server, Gauge, Trash2, Edit3, UserCheck, UserX,
   AlertTriangle, Smartphone, CreditCard, Landmark, FileText, Paperclip, Cookie,
-  LayoutGrid, List, BarChart3, MessageSquare, Send, ChevronDown, Percent, Briefcase
+  LayoutGrid, List, BarChart3, MessageSquare, Send, ChevronDown, Percent, Briefcase, Scale
 } from 'lucide-react';
 
 import {
@@ -33,6 +33,7 @@ import { mutate, visibleState } from '@/lib/operations';
 import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-browser';
 import { MobileAppLock } from '@/components/mobile-app-lock';
 import { DepositModal } from '@/components/deposit-modal';
+import { LegalModal, type LegalTab } from '@/components/legal-modal';
 import { getActiveBusinessCookie, setActiveBusinessCookie, clearActiveBusinessCookie, clearAuthCookie } from '@/lib/cookies';
 import { openCookieSettings } from '@/components/cookie-banner';
 
@@ -157,6 +158,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [currency, setCurrency] = useState('KES');
   const [demo, setDemo] = useState<ReturnType<typeof demoState> | null>(null);
   const [isDepositOpen, setIsDepositOpen] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<LegalTab>('terms');
 
   // Enhanced Expense Submission States
   const [expenseAmount, setExpenseAmount] = useState<string>('');
@@ -740,6 +743,29 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
           <form onSubmit={submit} className="app-form">
             <label>Business name<input name="name" required maxLength={80} placeholder="e.g. Acacia Technologies" /></label>
             <label>Wallet currency<Choice label="Currency" value={currency} onChange={setCurrency} options={['KES', 'USD', 'EUR', 'GBP', 'UGX', 'TZS'].map(c => ({ value: c, label: c }))} /></label>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', lineHeight: 1.5, margin: '8px 0' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', margin: 0 }}>
+                <input type="checkbox" required style={{ marginTop: 2, accentColor: '#0284c7' }} />
+                <span>
+                  I confirm this business operates lawfully in Kenya and agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setLegalTab('terms'); setLegalModalOpen(true); }}
+                    style={{ color: '#0284c7', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    B2B Terms of Service
+                  </button>{' '}
+                  and{' '}
+                  <button
+                    type="button"
+                    onClick={() => { setLegalTab('privacy'); setLegalModalOpen(true); }}
+                    style={{ color: '#0284c7', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    KDPA Privacy Policy
+                  </button>.
+                </span>
+              </label>
+            </div>
             {formError ? <p className="form-error" role="alert">{formError}</p> : null}
             <div className="form-actions">
               <button className="secondary" type="button" disabled={busy} onClick={() => setModal('')}>Cancel</button>
@@ -1171,7 +1197,16 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               <strong>{platformOnly ? 'Platform control room.' : 'Role-based workspace.'}</strong>
               <p>{platformOnly ? 'Monitor site performance, health, and all business accounts.' : 'Your menu only shows what your role can use.'}</p>
             </div>
-            <div className="sidebar-footer-links">
+            <div className="sidebar-footer-links" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <button
+                type="button"
+                className="sidebar-cookie-btn"
+                onClick={() => { setLegalTab('terms'); setLegalModalOpen(true); }}
+                title="View Terms of Service & Privacy Policy"
+              >
+                <Scale size={13} />
+                <span>Terms & Privacy (KDPA)</span>
+              </button>
               <button
                 type="button"
                 className="sidebar-cookie-btn"
@@ -2186,10 +2221,47 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
 
             {modal === 'help' ? (
               <div className="help-content">
-                <h3>1. Allocate a budget</h3><p>Business admins add internal budget to the company wallet.</p>
-                <h3>2. Submit expenses</h3><p>Team members select a category and explain the business purpose.</p>
-                <h3>3. Review independently</h3><p>Managers, finance accountants, and admins approve or reject expenses. Submissions need another reviewer for self-approval.</p>
-                <h3>4. Follow the balance</h3><p>Approval deducts the expense once. Activity records every decision. Wallets track budgets only and do not hold real money.</p>
+                <h3>1. Corporate budget & wallet deposits</h3>
+                <p>Business admins top up the company wallet using Paystack (M-Pesa STK Push / Card) or allocate internal operational budgets.</p>
+                <h3>2. Submit expenses & requests</h3>
+                <p>Team members submit reimbursement claims or spend requests with merchant receipts, M-Pesa codes, VAT details, and cost centers.</p>
+                <h3>3. Review independently</h3>
+                <p>Managers, accountants, and admins approve or reject expenses with strict segregation of duties (no self-approvals).</p>
+                <h3>4. Transparent receipts & ledger</h3>
+                <p>Approvals automatically deduct from the ledger. Approved requests prompt the requester to submit receipts or M-Pesa records for audit compliance.</p>
+
+                <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', background: '#f8fafc', padding: '14px 16px', borderRadius: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                    <Scale size={16} style={{ color: '#0284c7' }} />
+                    <strong style={{ fontSize: 13, color: '#0f172a' }}>Kenyan Law & Statutory Compliance</strong>
+                  </div>
+                  <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 10px', lineHeight: 1.5 }}>
+                    ExpenseIQ Business operates in full compliance with the <strong>Kenya Data Protection Act, 2019 (KDPA)</strong> and Central Bank of Kenya National Payment System regulations.
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => { setLegalTab('terms'); setLegalModalOpen(true); }}
+                      style={{ fontSize: 12, fontWeight: 600, color: '#0284c7', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '5px 11px', borderRadius: 6, cursor: 'pointer' }}
+                    >
+                      Terms of Service
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setLegalTab('privacy'); setLegalModalOpen(true); }}
+                      style={{ fontSize: 12, fontWeight: 600, color: '#0284c7', background: '#e0f2fe', border: '1px solid #bae6fd', padding: '5px 11px', borderRadius: 6, cursor: 'pointer' }}
+                    >
+                      Privacy Policy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setLegalTab('kenya_compliance'); setLegalModalOpen(true); }}
+                      style={{ fontSize: 12, fontWeight: 600, color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '5px 11px', borderRadius: 6, cursor: 'pointer' }}
+                    >
+                      Kenya Regulatory Architecture
+                    </button>
+                  </div>
+                </div>
               </div>
             ) : modal === 'details' && selected ? (
               <div className="expense-detail">
@@ -2917,6 +2989,30 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   <>
                     <label>Business name<input name="name" required maxLength={80} placeholder="e.g. Acacia Technologies" /></label>
                     <label>Wallet currency<Choice label="Currency" value={currency} onChange={setCurrency} options={['KES', 'USD', 'EUR', 'GBP', 'UGX', 'TZS'].map(c => ({ value: c, label: c }))} /></label>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#475569', lineHeight: 1.5, margin: '8px 0' }}>
+                      <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, cursor: 'pointer', margin: 0 }}>
+                        <input type="checkbox" required style={{ marginTop: 2, accentColor: '#0284c7' }} />
+                        <span>
+                          I agree to the{' '}
+                          <button
+                            type="button"
+                            onClick={() => { setLegalTab('terms'); setLegalModalOpen(true); }}
+                            style={{ color: '#0284c7', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+                          >
+                            Terms of Service
+                          </button>{' '}
+                          and{' '}
+                          <button
+                            type="button"
+                            onClick={() => { setLegalTab('privacy'); setLegalModalOpen(true); }}
+                            style={{ color: '#0284c7', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+                          >
+                            KDPA Privacy Policy
+                          </button>{' '}
+                          under Kenyan Law.
+                        </span>
+                      </label>
+                    </div>
                     <p className="muted">This registration will be reviewed by the platform admin. After approval, you can add managers, team members, wallet budgets, and categories.</p>
                   </>
                 ) : null}
@@ -3046,6 +3142,11 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             }}
           />
         ) : null}
+        <LegalModal
+          open={legalModalOpen}
+          onOpenChange={setLegalModalOpen}
+          defaultTab={legalTab}
+        />
         <Toaster position="bottom-right" richColors />
       </SidebarProvider>
     </>

@@ -7,16 +7,24 @@ import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-bro
 import { syncAuthCookie } from '@/lib/cookies';
 import { GoogleIcon } from '@/components/google-icon';
 import { authCallbackUrl } from '@/lib/auth-url';
+import { LegalModal, type LegalTab } from '@/components/legal-modal';
 
 export default function Signup() {
   const router = useRouter();
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<LegalTab>('terms');
 
   async function signInWithGoogle() {
     setError('');
     setMessage('');
+    if (!agreeTerms) {
+      setError('Please read and agree to the Terms of Service and Privacy Policy to continue with Google.');
+      return;
+    }
     if (!hasSupabaseBrowserConfig()) {
       setError('Supabase is not configured yet. Add the Vercel environment variables, then redeploy.');
       return;
@@ -34,6 +42,10 @@ export default function Signup() {
     event.preventDefault();
     setError('');
     setMessage('');
+    if (!agreeTerms) {
+      setError('Please read and agree to the Terms of Service and Privacy Policy to create your account.');
+      return;
+    }
     if (!hasSupabaseBrowserConfig()) {
       setError('Supabase is not configured yet. Add the Vercel environment variables, then redeploy.');
       return;
@@ -100,6 +112,38 @@ export default function Signup() {
               Password
               <input name="password" type="password" required minLength={8} autoComplete="new-password" placeholder="At least 8 characters" />
             </label>
+
+            {/* Terms and Privacy Consent Checkbox */}
+            <div style={{ marginTop: 14, marginBottom: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '12px 14px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', fontSize: 12.5, color: '#334155', lineHeight: 1.5, margin: 0 }}>
+                <input
+                  type="checkbox"
+                  checked={agreeTerms}
+                  onChange={(e) => setAgreeTerms(e.target.checked)}
+                  style={{ marginTop: 3, width: 16, height: 16, accentColor: '#0284c7', flexShrink: 0 }}
+                />
+                <span>
+                  I have read and agree to the{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setLegalTab('terms'); setLegalModalOpen(true); }}
+                    style={{ color: '#0284c7', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Terms & Conditions
+                  </button>{' '}
+                  and{' '}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.preventDefault(); setLegalTab('privacy'); setLegalModalOpen(true); }}
+                    style={{ color: '#0284c7', textDecoration: 'underline', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+                  >
+                    Privacy Policy
+                  </button>{' '}
+                  governed under the Laws of Kenya and the Kenya Data Protection Act, 2019.
+                </span>
+              </label>
+            </div>
+
             {error ? <p className="form-error" role="alert">{error}</p> : null}
             {message ? <p className="success-note" role="status">{message}</p> : null}
             <button className="primary" disabled={busy} type="submit">
@@ -109,6 +153,24 @@ export default function Signup() {
 
           <div className="auth-actions">
             <a className="secondary" href="/login">I already have access</a>
+          </div>
+
+          {/* Statutory and Regulatory Badges Footer */}
+          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', fontSize: 11.5, color: '#64748b', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <a href="/terms" target="_blank" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a>
+              <span>·</span>
+              <a href="/privacy" target="_blank" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => { setLegalTab('kenya_compliance'); setLegalModalOpen(true); }}
+                style={{ color: '#0284c7', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Kenyan Legal Framework
+              </button>
+            </div>
+            <span>Governed by KDPA 2019 · Central Bank of Kenya (NPS Act) · KRA e-TIMS Ready</span>
           </div>
         </div>
 
@@ -127,6 +189,15 @@ export default function Signup() {
           </div>
         </aside>
       </section>
+
+      {/* Interactive In-App Legal Modal */}
+      <LegalModal
+        open={legalModalOpen}
+        onOpenChange={setLegalModalOpen}
+        defaultTab={legalTab}
+        showAcceptButton
+        onAccept={() => setAgreeTerms(true)}
+      />
     </main>
   );
 }

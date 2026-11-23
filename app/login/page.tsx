@@ -20,6 +20,7 @@ import { getSupabaseBrowser, hasSupabaseBrowserConfig } from '@/lib/supabase-bro
 import { syncAuthCookie } from '@/lib/cookies';
 import { GoogleIcon } from '@/components/google-icon';
 import { authCallbackUrl } from '@/lib/auth-url';
+import { LegalModal, type LegalTab } from '@/components/legal-modal';
 
 const roles = [
   { title: 'Platform admin', text: 'Approve businesses and monitor the whole SaaS.', icon: Sparkles },
@@ -32,6 +33,8 @@ export default function Login() {
   const router = useRouter();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  const [legalTab, setLegalTab] = useState<LegalTab>('terms');
 
   async function signInWithGoogle() {
     setError('');
@@ -112,6 +115,24 @@ export default function Login() {
 
           <div className="auth-actions">
             <a className="secondary" href="/signup">Create business account</a>
+          </div>
+
+          {/* Statutory and Regulatory Badges Footer */}
+          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', fontSize: 11.5, color: '#64748b', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <a href="/terms" target="_blank" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>Terms of Service</a>
+              <span>·</span>
+              <a href="/privacy" target="_blank" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>Privacy Policy</a>
+              <span>·</span>
+              <button
+                type="button"
+                onClick={() => { setLegalTab('kenya_compliance'); setLegalModalOpen(true); }}
+                style={{ color: '#0284c7', background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer', fontWeight: 600 }}
+              >
+                Kenyan Legal Framework
+              </button>
+            </div>
+            <span>Governed by KDPA 2019 · Central Bank of Kenya (NPS Act) · KRA e-TIMS Ready</span>
           </div>
         </div>
 
@@ -205,6 +226,13 @@ export default function Login() {
           </div>
         </aside>
       </section>
+
+      {/* Interactive In-App Legal Modal */}
+      <LegalModal
+        open={legalModalOpen}
+        onOpenChange={setLegalModalOpen}
+        defaultTab={legalTab}
+      />
     </main>
   );
 }
