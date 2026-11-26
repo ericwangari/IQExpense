@@ -21,6 +21,7 @@ import { syncAuthCookie } from '@/lib/cookies';
 import { GoogleIcon } from '@/components/google-icon';
 import { authCallbackUrl } from '@/lib/auth-url';
 import { LegalModal, type LegalTab } from '@/components/legal-modal';
+import { LiveAuthBackground } from '@/components/live-auth-background';
 
 const roles = [
   { title: 'Platform admin', text: 'Approve businesses and monitor the whole SaaS.', icon: Sparkles },
@@ -77,6 +78,7 @@ export default function Login() {
 
   return (
     <main className="auth-shell premium-auth-shell">
+      <LiveAuthBackground />
       <section className="auth-card premium-auth-card">
         <div className="auth-main">
           <div className="auth-brand">

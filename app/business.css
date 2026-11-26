@@ -3047,3 +3047,188 @@ button.danger:hover:not(:disabled) {
   color: #38bdf8;
   flex-shrink: 0;
 }
+
+/* Live Background Animation & Aurora Mesh for Auth & Signup */
+.live-auth-bg-root {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Floating Aurora Mesh Orbs */
+.aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.aurora-orb-1 {
+  width: 520px;
+  height: 520px;
+  top: -120px;
+  left: -80px;
+  background: radial-gradient(circle, rgba(33, 212, 253, 0.75) 0%, rgba(49, 92, 246, 0.45) 55%, transparent 75%);
+  animation: aurora-float-1 22s ease-in-out infinite alternate;
+}
+
+.aurora-orb-2 {
+  width: 580px;
+  height: 580px;
+  top: 10%;
+  right: -140px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.65) 0%, rgba(99, 102, 241, 0.4) 50%, transparent 75%);
+  animation: aurora-float-2 26s ease-in-out infinite alternate;
+}
+
+.aurora-orb-3 {
+  width: 480px;
+  height: 480px;
+  bottom: -100px;
+  left: 20%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.45) 0%, rgba(6, 182, 212, 0.35) 55%, transparent 75%);
+  animation: aurora-float-3 20s ease-in-out infinite alternate;
+}
+
+.aurora-orb-4 {
+  width: 440px;
+  height: 440px;
+  bottom: 15%;
+  right: 15%;
+  background: radial-gradient(circle, rgba(49, 92, 246, 0.5) 0%, rgba(139, 92, 246, 0.35) 50%, transparent 75%);
+  animation: aurora-float-4 24s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-float-1 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(120px, 80px, 0) scale(1.18) rotate(45deg);
+  }
+  100% {
+    transform: translate3d(60px, 140px, 0) scale(0.92) rotate(-30deg);
+  }
+}
+
+@keyframes aurora-float-2 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-140px, 90px, 0) scale(1.15) rotate(-55deg);
+  }
+  100% {
+    transform: translate3d(-70px, -60px, 0) scale(0.95) rotate(30deg);
+  }
+}
+
+@keyframes aurora-float-3 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(90px, -80px, 0) scale(1.22);
+  }
+  100% {
+    transform: translate3d(-60px, -40px, 0) scale(0.88);
+  }
+}
+
+@keyframes aurora-float-4 {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate3d(-100px, -90px, 0) scale(1.12) rotate(60deg);
+  }
+  100% {
+    transform: translate3d(50px, -50px, 0) scale(0.9) rotate(-40deg);
+  }
+}
+
+/* Perspective Grid Matrix with Scanning Beam */
+.live-grid-mesh {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 30%, transparent 80%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 45%, #000 30%, transparent 80%);
+  pointer-events: none;
+}
+
+.live-scanline {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, rgba(33, 212, 253, 0.15) 20%, rgba(33, 212, 253, 0.8) 50%, rgba(124, 58, 237, 0.7) 70%, transparent 100%);
+  box-shadow: 0 0 18px 2px rgba(33, 212, 253, 0.65);
+  animation: grid-scanline 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes grid-scanline {
+  0% {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.85;
+  }
+  85% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateY(1150px);
+    opacity: 0;
+  }
+}
+
+/* Enhanced Glassmorphism for Auth Card with Ambient Backing */
+.premium-auth-card {
+  box-shadow: 
+    0 36px 120px rgba(4, 12, 28, 0.42),
+    0 0 0 1px rgba(255, 255, 255, 0.45),
+    0 0 45px rgba(33, 212, 253, 0.12);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Signup Steps Card Hover Lift & Glow */
+.premium-signup-steps > div {
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.premium-signup-steps > div:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(147, 197, 253, 0.42) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+}
+
+.premium-signup-steps > div:hover span {
+  background: linear-gradient(135deg, #38bdf8, #2563eb) !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+}
+
+/* Accessibility: reduce motion when user prefers */
+@media (prefers-reduced-motion: reduce) {
+  .aurora-orb,
+  .live-scanline {
+    animation: none !important;
+  }
+  .live-scanline {
+    display: none;
+  }
+}

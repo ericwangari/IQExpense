@@ -8,6 +8,7 @@ import { syncAuthCookie } from '@/lib/cookies';
 import { GoogleIcon } from '@/components/google-icon';
 import { authCallbackUrl } from '@/lib/auth-url';
 import { LegalModal, type LegalTab } from '@/components/legal-modal';
+import { LiveAuthBackground } from '@/components/live-auth-background';
 
 export default function Signup() {
   const router = useRouter();
@@ -78,6 +79,7 @@ export default function Signup() {
 
   return (
     <main className="auth-shell premium-auth-shell">
+      <LiveAuthBackground />
       <section className="auth-card premium-auth-card signup-card">
         <div className="auth-main">
           <div className="auth-brand">
