@@ -174,7 +174,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
   const [payeeDetailsInput, setPayeeDetailsInput] = useState<string>('');
   const [mpesaMessage, setMpesaMessage] = useState<string>('');
 
-  // Odoo-style ERP Views, Grouping, Bulk Selection & Chatter
+  // ExpenseIQ ERP Views, Grouping, Bulk Selection & Chatter
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'pivot'>('list');
   const [groupBy, setGroupBy] = useState<'none' | 'category' | 'employee' | 'status' | 'paymentMethod' | 'month'>('none');
   const [selectedExpenseIds, setSelectedExpenseIds] = useState<string[]>([]);
@@ -798,13 +798,13 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     const isDup = business ? isDuplicateExpense(business.expenses, e) : false;
     const canBatch = allowSelect && e.status === 'pending' && canReview && (canAdmin || e.submittedBy !== data.email);
     return (
-      <TableRow key={e.id} className={selectedExpenseIds.includes(e.id) ? 'odoo-row-selected' : ''}>
+      <TableRow key={e.id} className={selectedExpenseIds.includes(e.id) ? 'iq-row-selected' : ''}>
         {allowSelect ? (
           <TableCell style={{ width: 36, paddingRight: 0 }}>
             {canBatch ? (
               <input
                 type="checkbox"
-                className="odoo-checkbox"
+                className="iq-checkbox"
                 aria-label={`Select ${e.merchant}`}
                 checked={selectedExpenseIds.includes(e.id)}
                 onChange={() => toggleSelectExpense(e.id)}
@@ -818,18 +818,18 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
             <span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 {e.merchant}
-                {isDup ? <span className="odoo-dup-badge" title="Potential duplicate expense detected">Duplicate?</span> : null}
+                {isDup ? <span className="iq-dup-badge" title="Potential duplicate expense detected">Duplicate?</span> : null}
               </span>
               <small style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <span>{e.reference || `EXP-${e.id.slice(-5).toUpperCase()}`}</span>
-                <span className={e.expenseType === 'request' ? 'odoo-type-pill-request' : 'odoo-type-pill-expense'}>
+                <span className={e.expenseType === 'request' ? 'iq-type-pill-request' : 'iq-type-pill-expense'}>
                   {e.expenseType === 'request' ? 'Admin Request' : 'Expense'}
                 </span>
-                {e.proofStatus === 'pending_proof' ? <span className="odoo-proof-needed-pill">Proof Needed</span> : null}
-                {e.proofStatus === 'proof_submitted' ? <span className="odoo-proof-ok-pill">Proof Verified</span> : null}
-                {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
-                {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
-                {e.notes && e.notes.length > 1 ? <span className="odoo-chatter-count"><MessageSquare size={10} /> {e.notes.length}</span> : null}
+                {e.proofStatus === 'pending_proof' ? <span className="iq-proof-needed-pill">Proof Needed</span> : null}
+                {e.proofStatus === 'proof_submitted' ? <span className="iq-proof-ok-pill">Proof Verified</span> : null}
+                {e.analyticAccount ? <span className="iq-tag-pill">{e.analyticAccount}</span> : null}
+                {e.taxRate ? <span className="iq-tax-pill">VAT {e.taxRate}%</span> : null}
+                {e.notes && e.notes.length > 1 ? <span className="iq-chatter-count"><MessageSquare size={10} /> {e.notes.length}</span> : null}
               </small>
             </span>
           </button>
@@ -885,7 +885,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 {selectableItems.length > 0 ? (
                   <input
                     type="checkbox"
-                    className="odoo-checkbox"
+                    className="iq-checkbox"
                     aria-label="Select all reviewable expenses"
                     checked={allSelected}
                     onChange={() => {
@@ -934,23 +934,23 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       groups.get(key)!.push(item);
     }
     return (
-      <div className="odoo-grouped-list">
+      <div className="iq-grouped-list">
         {Array.from(groups.entries()).map(([label, groupItems]) => {
           const isCollapsed = Boolean(collapsedGroups[label]);
           const groupTotal = groupItems.reduce((s, e) => s + e.amount, 0);
           return (
-            <div key={label} className="odoo-group-block">
+            <div key={label} className="iq-group-block">
               <button
                 type="button"
-                className="odoo-group-header"
+                className="iq-group-header"
                 onClick={() => setCollapsedGroups(prev => ({ ...prev, [label]: !prev[label] }))}
               >
-                <span className="odoo-group-title">
+                <span className="iq-group-title">
                   <ChevronDown size={16} style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
                   <strong>{label}</strong>
-                  <span className="odoo-count-pill">{groupItems.length}</span>
+                  <span className="iq-count-pill">{groupItems.length}</span>
                 </span>
-                <span className="odoo-group-subtotal">{money(groupTotal, business?.currency)}</span>
+                <span className="iq-group-subtotal">{money(groupTotal, business?.currency)}</span>
               </button>
               {!isCollapsed ? transactions(groupItems, review, true) : null}
             </div>
@@ -967,57 +967,57 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
       { key: 'rejected', label: 'Refused', dotColor: '#ef4444' },
     ];
     return (
-      <div className="odoo-kanban-board">
+      <div className="iq-kanban-board">
         {stages.map(stage => {
           const stageItems = items.filter(e => e.status === stage.key);
           const stageSum = stageItems.reduce((s, e) => s + e.amount, 0);
           return (
-            <div key={stage.key} className="odoo-kanban-col">
-              <div className="odoo-kanban-col-head">
-                <div className="odoo-kanban-stage-title">
+            <div key={stage.key} className="iq-kanban-col">
+              <div className="iq-kanban-col-head">
+                <div className="iq-kanban-stage-title">
                   <span className="stage-dot" style={{ background: stage.dotColor }} />
                   <strong>{stage.label}</strong>
-                  <span className="odoo-count-pill">{stageItems.length}</span>
+                  <span className="iq-count-pill">{stageItems.length}</span>
                 </div>
-                <span className="odoo-kanban-col-total">{money(stageSum, business?.currency)}</span>
+                <span className="iq-kanban-col-total">{money(stageSum, business?.currency)}</span>
               </div>
-              <div className="odoo-kanban-cards">
+              <div className="iq-kanban-cards">
                 {stageItems.length === 0 ? (
-                  <div className="odoo-kanban-empty">No {stage.label.toLowerCase()} expenses</div>
+                  <div className="iq-kanban-empty">No {stage.label.toLowerCase()} expenses</div>
                 ) : stageItems.map(e => {
                   const isDup = business ? isDuplicateExpense(business.expenses, e) : false;
                   const canApproveCard = e.status === 'pending' && canReview && (canAdmin || e.submittedBy !== data.email);
                   return (
-                    <div key={e.id} className="odoo-kanban-card" onClick={() => open('details', e)}>
-                      <div className="odoo-kanban-card-top">
-                        <span className="odoo-ref-tag">{e.reference || `EXP-${e.id.slice(-5).toUpperCase()}`}</span>
+                    <div key={e.id} className="iq-kanban-card" onClick={() => open('details', e)}>
+                      <div className="iq-kanban-card-top">
+                        <span className="iq-ref-tag">{e.reference || `EXP-${e.id.slice(-5).toUpperCase()}`}</span>
                         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                          {isDup ? <span className="odoo-dup-badge">Duplicate?</span> : null}
-                          <span className="odoo-cat-tag">{e.category}</span>
+                          {isDup ? <span className="iq-dup-badge">Duplicate?</span> : null}
+                          <span className="iq-cat-tag">{e.category}</span>
                         </div>
                       </div>
-                      <div className="odoo-kanban-card-main">
+                      <div className="iq-kanban-card-main">
                         <strong>{e.merchant}</strong>
-                        <span className="odoo-kanban-amount">{money(e.amount, business?.currency)}</span>
+                        <span className="iq-kanban-amount">{money(e.amount, business?.currency)}</span>
                       </div>
-                      <p className="odoo-kanban-desc">{e.description}</p>
-                      <div className="odoo-kanban-meta-pills">
-                        <span className={e.expenseType === 'request' ? 'odoo-type-pill-request' : 'odoo-type-pill-expense'}>
+                      <p className="iq-kanban-desc">{e.description}</p>
+                      <div className="iq-kanban-meta-pills">
+                        <span className={e.expenseType === 'request' ? 'iq-type-pill-request' : 'iq-type-pill-expense'}>
                           {e.expenseType === 'request' ? 'Admin Request' : 'Expense'}
                         </span>
-                        {e.proofStatus === 'pending_proof' ? <span className="odoo-proof-needed-pill">Proof Needed</span> : null}
-                        {e.proofStatus === 'proof_submitted' ? <span className="odoo-proof-ok-pill">Proof Verified</span> : null}
-                        {e.paymentMethod ? <span className="odoo-tag-pill">{e.paymentMethod.toUpperCase()}</span> : null}
-                        {e.analyticAccount ? <span className="odoo-tag-pill">{e.analyticAccount}</span> : null}
-                        {e.taxRate ? <span className="odoo-tax-pill">VAT {e.taxRate}%</span> : null}
+                        {e.proofStatus === 'pending_proof' ? <span className="iq-proof-needed-pill">Proof Needed</span> : null}
+                        {e.proofStatus === 'proof_submitted' ? <span className="iq-proof-ok-pill">Proof Verified</span> : null}
+                        {e.paymentMethod ? <span className="iq-tag-pill">{e.paymentMethod.toUpperCase()}</span> : null}
+                        {e.analyticAccount ? <span className="iq-tag-pill">{e.analyticAccount}</span> : null}
+                        {e.taxRate ? <span className="iq-tax-pill">VAT {e.taxRate}%</span> : null}
                       </div>
-                      <div className="odoo-kanban-card-footer" onClick={ev => ev.stopPropagation()}>
-                        <div className="odoo-kanban-user">
-                          <span className="odoo-mini-avatar">{nameOf(e.submittedBy).slice(0, 2).toUpperCase()}</span>
+                      <div className="iq-kanban-card-footer" onClick={ev => ev.stopPropagation()}>
+                        <div className="iq-kanban-user">
+                          <span className="iq-mini-avatar">{nameOf(e.submittedBy).slice(0, 2).toUpperCase()}</span>
                           <span>{nameOf(e.submittedBy)} · {shortDate(e.date)}</span>
                         </div>
                         {canApproveCard && (review || page === 'Expenses') ? (
-                          <div className="odoo-kanban-actions">
+                          <div className="iq-kanban-actions">
                             <button
                               type="button"
                               className="approve"
@@ -1063,8 +1063,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
     const maxEmpTotal = Math.max(...Array.from(empMap.values()).map(v => v.total), 1);
 
     return (
-      <div className="odoo-pivot-wrap">
-        <div className="odoo-pivot-section">
+      <div className="iq-pivot-wrap">
+        <div className="iq-pivot-section">
           <h3><BarChart3 size={16} /> Pivot Analysis: Category × Status</h3>
           <Table>
             <TableHeader>
@@ -1103,17 +1103,17 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
           </Table>
         </div>
 
-        <div className="odoo-pivot-section">
+        <div className="iq-pivot-section">
           <h3><Users size={16} /> Spend by Employee</h3>
-          <div className="odoo-emp-bars">
+          <div className="iq-emp-bars">
             {Array.from(empMap.entries()).sort((a, b) => b[1].total - a[1].total).map(([emailKey, stats]) => (
-              <div key={emailKey} className="odoo-emp-bar-row">
-                <div className="odoo-emp-bar-info">
+              <div key={emailKey} className="iq-emp-bar-row">
+                <div className="iq-emp-bar-info">
                   <strong>{nameOf(emailKey)}</strong>
                   <span>{stats.count} claims · {money(stats.total, business?.currency)}</span>
                 </div>
-                <div className="odoo-emp-track">
-                  <div className="odoo-emp-fill" style={{ width: `${Math.round((stats.total / maxEmpTotal) * 100)}%` }} />
+                <div className="iq-emp-track">
+                  <div className="iq-emp-fill" style={{ width: `${Math.round((stats.total / maxEmpTotal) * 100)}%` }} />
                 </div>
               </div>
             ))}
@@ -1326,7 +1326,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   </div>
                 ) : business && myRole ? (
                   <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button className="secondary odoo-request-btn" disabled={business.suspended} onClick={() => open('expense', null, null, 'request')}>
+                    <button className="secondary iq-request-btn" disabled={business.suspended} onClick={() => open('expense', null, null, 'request')}>
                       <Send size={16} />Request from Admin
                     </button>
                     <button className="primary" disabled={business.suspended} onClick={() => open('expense', null, null, 'reimbursement')}>
@@ -1482,7 +1482,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         { value: 'month', label: 'Report by month' }
                       ]}
                     />
-                    <div className="odoo-view-switcher" role="group" aria-label="View mode">
+                    <div className="iq-view-switcher" role="group" aria-label="View mode">
                       <button type="button" className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')} title="List View">
                         <List size={15} />
                       </button>
@@ -1498,7 +1498,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   </div>
                 </div>
                 {selectedExpenseIds.length > 0 ? (
-                  <div className="odoo-bulk-bar">
+                  <div className="iq-bulk-bar">
                     <span>
                       <strong>{selectedExpenseIds.length}</strong> selected ·{' '}
                       {money(
@@ -1508,7 +1508,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         business.currency
                       )}
                     </span>
-                    <div className="odoo-bulk-actions">
+                    <div className="iq-bulk-actions">
                       {canReview ? (
                         <>
                           <button
@@ -2265,25 +2265,25 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
               </div>
             ) : modal === 'details' && selected ? (
               <div className="expense-detail">
-                {/* Odoo Chevron Statusbar */}
-                <div className="odoo-statusbar">
-                  <div className="odoo-chevron-steps">
-                    <span className="odoo-step done">Submitted</span>
-                    <span className={`odoo-step ${selected.status === 'pending' ? 'active' : 'done'}`}>To Approve</span>
-                    <span className={`odoo-step ${selected.status === 'approved' ? 'active-approved' : selected.status === 'rejected' ? 'active-rejected' : ''}`}>
+                {/* ExpenseIQ Chevron Statusbar */}
+                <div className="iq-statusbar">
+                  <div className="iq-chevron-steps">
+                    <span className="iq-step done">Submitted</span>
+                    <span className={`iq-step ${selected.status === 'pending' ? 'active' : 'done'}`}>To Approve</span>
+                    <span className={`iq-step ${selected.status === 'approved' ? 'active-approved' : selected.status === 'rejected' ? 'active-rejected' : ''}`}>
                       {selected.status === 'rejected' ? 'Refused' : 'Approved & Posted'}
                     </span>
                     {selected.expenseType === 'request' && selected.status === 'approved' ? (
-                      <span className={`odoo-step ${selected.proofStatus === 'proof_submitted' ? 'active-approved' : 'active'}`}>
+                      <span className={`iq-step ${selected.proofStatus === 'proof_submitted' ? 'active-approved' : 'active'}`}>
                         {selected.proofStatus === 'proof_submitted' ? 'Proof Verified' : 'Proof Needed'}
                       </span>
                     ) : null}
                   </div>
-                  {selected.reference ? <span className="odoo-ref-pill">{selected.reference}</span> : null}
+                  {selected.reference ? <span className="iq-ref-pill">{selected.reference}</span> : null}
                 </div>
 
                 {selected.expenseType === 'request' && selected.status === 'approved' && selected.proofStatus === 'pending_proof' ? (
-                  <div className="odoo-proof-banner">
+                  <div className="iq-proof-banner">
                     <div>
                       <strong>Payment Record Requested for Transparency</strong>
                       <p>Admin approved this request. {selected.submittedBy === data.email || canAdmin ? 'Please submit the receipt, M-Pesa confirmation SMS, or payment reference code.' : `Waiting for ${nameOf(selected.submittedBy)} to attach payment proof.`}</p>
@@ -2296,23 +2296,23 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   </div>
                 ) : null}
 
-                {/* Odoo Smart Buttons Strip */}
-                <div className="odoo-smart-buttons">
-                  <div className="odoo-smart-btn">
+                {/* ExpenseIQ Smart Buttons Strip */}
+                <div className="iq-smart-buttons">
+                  <div className="iq-smart-btn">
                     <Briefcase size={15} />
                     <div>
                       <strong>{selected.analyticAccount || 'General'}</strong>
                       <span>Cost Center</span>
                     </div>
                   </div>
-                  <div className="odoo-smart-btn">
+                  <div className="iq-smart-btn">
                     <Percent size={15} />
                     <div>
                       <strong>{selected.taxRate ? `${selected.taxRate}% (${money(selected.taxAmount || 0, business?.currency)})` : '0% VAT'}</strong>
                       <span>Tax Included</span>
                     </div>
                   </div>
-                  <div className="odoo-smart-btn">
+                  <div className="iq-smart-btn">
                     <MessageSquare size={15} />
                     <div>
                       <strong>{selected.notes?.length || 0}</strong>
@@ -2322,7 +2322,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 </div>
 
                 {business && isDuplicateExpense(business.expenses, selected) ? (
-                  <div className="odoo-dup-banner">
+                  <div className="iq-dup-banner">
                     <AlertTriangle size={16} />
                     <span><strong>Possible Duplicate:</strong> Another expense for {money(selected.amount, business.currency)} to {payeeName(selected)} exists on {shortDate(selected.date)}.</span>
                   </div>
@@ -2395,13 +2395,13 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                   </div>
                 ) : null}
 
-                {/* Odoo Chatter */}
-                <div className="odoo-chatter">
-                  <div className="odoo-chatter-head">
+                {/* ExpenseIQ Chatter */}
+                <div className="iq-chatter">
+                  <div className="iq-chatter-head">
                     <MessageSquare size={15} />
                     <span>Chatter & Audit Log</span>
                   </div>
-                  <div className="odoo-chatter-composer">
+                  <div className="iq-chatter-composer">
                     <input
                       type="text"
                       placeholder="Log a note or @mention a teammate…"
@@ -2423,7 +2423,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       <Send size={13} /> Log Note
                     </button>
                   </div>
-                  <div className="odoo-chatter-feed">
+                  <div className="iq-chatter-feed">
                     {(selected.notes && selected.notes.length > 0 ? [...selected.notes].reverse() : [{
                       id: 'legacy-created',
                       actor: selected.submittedBy,
@@ -2431,8 +2431,8 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                       date: selected.date,
                       type: 'system' as const
                     }]).map(note => (
-                      <div key={note.id} className={`odoo-chatter-item ${note.type === 'note' ? 'comment' : 'system'}`}>
-                        <div className="odoo-chatter-meta">
+                      <div key={note.id} className={`iq-chatter-item ${note.type === 'note' ? 'comment' : 'system'}`}>
+                        <div className="iq-chatter-meta">
                           <strong>{nameOf(note.actor)}</strong>
                           <time>{new Date(note.date).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' })}</time>
                         </div>
@@ -2447,12 +2447,12 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                 {modal === 'expense' ? (
                   <>
                     {/* Mode Switcher: Submit Expense vs Request from Admin */}
-                    <div className="odoo-type-switcher" role="tablist" aria-label="Expense submission mode">
+                    <div className="iq-type-switcher" role="tablist" aria-label="Expense submission mode">
                       <button
                         type="button"
                         role="tab"
                         aria-selected={expenseType === 'reimbursement'}
-                        className={`odoo-type-tab ${expenseType === 'reimbursement' ? 'active' : ''}`}
+                        className={`iq-type-tab ${expenseType === 'reimbursement' ? 'active' : ''}`}
                         onClick={() => setExpenseType('reimbursement')}
                       >
                         <Receipt size={17} />
@@ -2465,7 +2465,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         type="button"
                         role="tab"
                         aria-selected={expenseType === 'request'}
-                        className={`odoo-type-tab ${expenseType === 'request' ? 'active request-mode' : ''}`}
+                        className={`iq-type-tab ${expenseType === 'request' ? 'active request-mode' : ''}`}
                         onClick={() => setExpenseType('request')}
                       >
                         <Send size={17} />
@@ -2841,7 +2841,7 @@ export function ExpenseApp({ platformOnly = false }: { platformOnly?: boolean })
                         ))}
                       </div>
                       {currentAmountCents > 0 && Number(taxRateInput) > 0 ? (
-                        <div className="odoo-tax-preview">
+                        <div className="iq-tax-preview">
                           <span>Net amount: <strong>{money(currentAmountCents - Math.round(currentAmountCents * (Number(taxRateInput) / (100 + Number(taxRateInput)))), business?.currency)}</strong></span>
                           <span>VAT ({taxRateInput}%): <strong>{money(Math.round(currentAmountCents * (Number(taxRateInput) / (100 + Number(taxRateInput)))), business?.currency)}</strong></span>
                         </div>

@@ -2119,15 +2119,15 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   }
 }
 
-/* ===== Odoo ERP Extensions (Control Panel, Kanban, Pivot, Statusbar & Chatter) ===== */
-.odoo-view-switcher {
+/* ===== ExpenseIQ ERP Extensions (Control Panel, Kanban, Pivot, Statusbar & Chatter) ===== */
+.iq-view-switcher {
   display: inline-flex;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   overflow: hidden;
   background: #ffffff;
 }
-.odoo-view-switcher button {
+.iq-view-switcher button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2139,19 +2139,19 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   border-right: 1px solid #e2e8f0;
   transition: background 0.15s, color 0.15s;
 }
-.odoo-view-switcher button:last-child {
+.iq-view-switcher button:last-child {
   border-right: none;
 }
-.odoo-view-switcher button:hover {
+.iq-view-switcher button:hover {
   background: #f1f5f9;
   color: #0f172a;
 }
-.odoo-view-switcher button.active {
+.iq-view-switcher button.active {
   background: #714b67;
   color: #ffffff;
 }
 
-.odoo-bulk-bar {
+.iq-bulk-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2164,7 +2164,7 @@ body{background:linear-gradient(180deg,#f7faff 0,#eef4fb 100%);color:#142033}.pr
   color: #3b0764;
   font-size: 13px;
 }
-.odoo-bulk-actions {
+.iq-bulk-actions {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2189,21 +2189,21 @@ button.danger:hover:not(:disabled) {
   background: #b91c1c;
 }
 
-.odoo-checkbox {
+.iq-checkbox {
   width: 16px;
   height: 16px;
   accent-color: #714b67;
   cursor: pointer;
 }
-.odoo-row-selected {
+.iq-row-selected {
   background: #faf5ff !important;
 }
 
-.odoo-dup-badge,
-.odoo-tag-pill,
-.odoo-tax-pill,
-.odoo-chatter-count,
-.odoo-ref-pill {
+.iq-dup-badge,
+.iq-tag-pill,
+.iq-tax-pill,
+.iq-chatter-count,
+.iq-ref-pill {
   display: inline-flex;
   align-items: center;
   gap: 3px;
@@ -2213,42 +2213,42 @@ button.danger:hover:not(:disabled) {
   border-radius: 999px;
   margin-left: 6px;
 }
-.odoo-dup-badge {
+.iq-dup-badge {
   background: #fef2f2;
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
-.odoo-tag-pill {
+.iq-tag-pill {
   background: #ede9fe;
   color: #5b21b6;
 }
-.odoo-tax-pill {
+.iq-tax-pill {
   background: #ecfeff;
   color: #0e7490;
 }
-.odoo-chatter-count {
+.iq-chatter-count {
   background: #f1f5f9;
   color: #475569;
 }
-.odoo-ref-pill {
+.iq-ref-pill {
   background: #f3e8ff;
   color: #6b21a8;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-.odoo-grouped-list {
+.iq-grouped-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 0 20px 20px;
 }
-.odoo-group-block {
+.iq-group-block {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   overflow: hidden;
   background: #ffffff;
 }
-.odoo-group-header {
+.iq-group-header {
   width: 100%;
   display: flex;
   align-items: center;
@@ -2262,16 +2262,16 @@ button.danger:hover:not(:disabled) {
   font-weight: 600;
   color: #1e293b;
 }
-.odoo-group-header:hover {
+.iq-group-header:hover {
   background: #f1f5f9;
 }
-.odoo-group-title {
+.iq-group-title {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
-.odoo-group-count,
-.odoo-count-pill {
+.iq-group-count,
+.iq-count-pill {
   background: #e2e8f0;
   color: #334155;
   font-size: 11px;
@@ -2279,14 +2279,14 @@ button.danger:hover:not(:disabled) {
   padding: 2px 8px;
   border-radius: 999px;
 }
-.odoo-group-total,
-.odoo-group-subtotal {
+.iq-group-total,
+.iq-group-subtotal {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   color: #0f172a;
 }
 
-.odoo-kanban-board {
+.iq-kanban-board {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
@@ -2294,11 +2294,11 @@ button.danger:hover:not(:disabled) {
   align-items: start;
 }
 @media (max-width: 960px) {
-  .odoo-kanban-board {
+  .iq-kanban-board {
     grid-template-columns: 1fr;
   }
 }
-.odoo-kanban-col {
+.iq-kanban-col {
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
@@ -2307,7 +2307,7 @@ button.danger:hover:not(:disabled) {
   flex-direction: column;
   gap: 10px;
 }
-.odoo-kanban-col-head {
+.iq-kanban-col-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2316,7 +2316,7 @@ button.danger:hover:not(:disabled) {
   border-bottom: 2px solid #cbd5e1;
   font-size: 13px;
 }
-.odoo-kanban-stage-title {
+.iq-kanban-stage-title {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2327,18 +2327,18 @@ button.danger:hover:not(:disabled) {
   border-radius: 999px;
   flex-shrink: 0;
 }
-.odoo-kanban-col-total {
+.iq-kanban-col-total {
   font-size: 12px;
   font-weight: 700;
   color: #334155;
   font-variant-numeric: tabular-nums;
 }
-.odoo-kanban-cards {
+.iq-kanban-cards {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.odoo-kanban-card {
+.iq-kanban-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
@@ -2349,17 +2349,17 @@ button.danger:hover:not(:disabled) {
   gap: 8px;
   transition: box-shadow 0.15s, border-color 0.15s;
 }
-.odoo-kanban-card:hover {
+.iq-kanban-card:hover {
   border-color: #714b67;
   box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
 }
-.odoo-kanban-card-top {
+.iq-kanban-card-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
 }
-.odoo-ref-tag {
+.iq-ref-tag {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   font-weight: 600;
@@ -2368,7 +2368,7 @@ button.danger:hover:not(:disabled) {
   padding: 2px 7px;
   border-radius: 6px;
 }
-.odoo-cat-tag {
+.iq-cat-tag {
   font-size: 11px;
   font-weight: 600;
   color: #475569;
@@ -2376,24 +2376,24 @@ button.danger:hover:not(:disabled) {
   padding: 2px 7px;
   border-radius: 6px;
 }
-.odoo-kanban-card-main {
+.iq-kanban-card-main {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
   gap: 10px;
 }
-.odoo-kanban-card-main strong {
+.iq-kanban-card-main strong {
   font-size: 14px;
   color: #0f172a;
 }
-.odoo-kanban-amount {
+.iq-kanban-amount {
   font-weight: 700;
   font-size: 14px;
   color: #0f172a;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.odoo-kanban-desc {
+.iq-kanban-desc {
   margin: 0;
   font-size: 12.5px;
   color: #64748b;
@@ -2403,15 +2403,15 @@ button.danger:hover:not(:disabled) {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-.odoo-kanban-meta-pills {
+.iq-kanban-meta-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
 }
-.odoo-kanban-meta-pills > * {
+.iq-kanban-meta-pills > * {
   margin-left: 0;
 }
-.odoo-kanban-card-footer {
+.iq-kanban-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2419,7 +2419,7 @@ button.danger:hover:not(:disabled) {
   padding-top: 8px;
   border-top: 1px solid #f1f5f9;
 }
-.odoo-kanban-user {
+.iq-kanban-user {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -2427,7 +2427,7 @@ button.danger:hover:not(:disabled) {
   color: #475569;
   min-width: 0;
 }
-.odoo-mini-avatar {
+.iq-mini-avatar {
   width: 22px;
   height: 22px;
   border-radius: 999px;
@@ -2440,11 +2440,11 @@ button.danger:hover:not(:disabled) {
   justify-content: center;
   flex-shrink: 0;
 }
-.odoo-kanban-actions {
+.iq-kanban-actions {
   display: flex;
   gap: 6px;
 }
-.odoo-kanban-actions button {
+.iq-kanban-actions button {
   width: 26px;
   height: 26px;
   border-radius: 6px;
@@ -2455,24 +2455,24 @@ button.danger:hover:not(:disabled) {
   background: #ffffff;
   cursor: pointer;
 }
-.odoo-kanban-actions button.approve {
+.iq-kanban-actions button.approve {
   color: #15803d;
   border-color: #bbf7d0;
   background: #f0fdf4;
 }
-.odoo-kanban-actions button.reject {
+.iq-kanban-actions button.reject {
   color: #b91c1c;
   border-color: #fecaca;
   background: #fef2f2;
 }
-.odoo-kanban-empty {
+.iq-kanban-empty {
   text-align: center;
   padding: 20px 10px;
   color: #94a3b8;
   font-size: 12.5px;
 }
 
-.odoo-pivot-wrap {
+.iq-pivot-wrap {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -2480,11 +2480,11 @@ button.danger:hover:not(:disabled) {
   max-width: 100%;
   box-sizing: border-box;
 }
-.odoo-pivot-section {
+.iq-pivot-section {
   max-width: 100%;
   overflow-x: auto;
 }
-.odoo-pivot-section h3 {
+.iq-pivot-section h3 {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2493,12 +2493,12 @@ button.danger:hover:not(:disabled) {
   margin: 0 0 12px;
   color: #1e293b;
 }
-.odoo-emp-bars {
+.iq-emp-bars {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.odoo-emp-bar-row {
+.iq-emp-bar-row {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2507,34 +2507,34 @@ button.danger:hover:not(:disabled) {
   border-radius: 8px;
   background: #fafcff;
 }
-.odoo-emp-bar-info {
+.iq-emp-bar-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   font-size: 13px;
 }
-.odoo-emp-bar-info strong {
+.iq-emp-bar-info strong {
   color: #0f172a;
 }
-.odoo-emp-bar-info span {
+.iq-emp-bar-info span {
   color: #475569;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.odoo-emp-track {
+.iq-emp-track {
   height: 10px;
   background: #e2e8f0;
   border-radius: 999px;
   overflow: hidden;
 }
-.odoo-emp-fill {
+.iq-emp-fill {
   height: 100%;
   background: linear-gradient(90deg, #714b67, #9333ea);
   border-radius: 999px;
 }
 
-.odoo-statusbar {
+.iq-statusbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2546,13 +2546,13 @@ button.danger:hover:not(:disabled) {
   border-radius: 8px;
   margin-bottom: 12px;
 }
-.odoo-chevron-steps {
+.iq-chevron-steps {
   display: flex;
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
 }
-.odoo-step {
+.iq-step {
   font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
@@ -2560,33 +2560,33 @@ button.danger:hover:not(:disabled) {
   background: #e2e8f0;
   color: #475569;
 }
-.odoo-step.done {
+.iq-step.done {
   background: #f3e8ff;
   color: #6b21a8;
 }
-.odoo-step.active {
+.iq-step.active {
   background: #fef3c7;
   color: #b45309;
   border: 1px solid #f59e0b;
 }
-.odoo-step.active-approved {
+.iq-step.active-approved {
   background: #dcfce7;
   color: #15803d;
   border: 1px solid #22c55e;
 }
-.odoo-step.active-rejected {
+.iq-step.active-rejected {
   background: #fee2e2;
   color: #b91c1c;
   border: 1px solid #ef4444;
 }
 
-.odoo-smart-buttons {
+.iq-smart-buttons {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 12px;
 }
-.odoo-smart-btn {
+.iq-smart-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2596,18 +2596,18 @@ button.danger:hover:not(:disabled) {
   background: #ffffff;
   color: #475569;
 }
-.odoo-smart-btn strong {
+.iq-smart-btn strong {
   display: block;
   font-size: 12.5px;
   color: #0f172a;
 }
-.odoo-smart-btn span {
+.iq-smart-btn span {
   display: block;
   font-size: 11px;
   color: #64748b;
 }
 
-.odoo-dup-banner {
+.iq-dup-banner {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2620,7 +2620,7 @@ button.danger:hover:not(:disabled) {
   margin-bottom: 12px;
 }
 
-.odoo-tax-preview {
+.iq-tax-preview {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -2633,12 +2633,12 @@ button.danger:hover:not(:disabled) {
   margin-top: 8px;
 }
 
-.odoo-chatter {
+.iq-chatter {
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid #e2e8f0;
 }
-.odoo-chatter-head {
+.iq-chatter-head {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -2647,70 +2647,70 @@ button.danger:hover:not(:disabled) {
   color: #1e293b;
   margin-bottom: 10px;
 }
-.odoo-chatter-composer {
+.iq-chatter-composer {
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
 }
-.odoo-chatter-composer input {
+.iq-chatter-composer input {
   flex: 1;
   padding: 8px 10px;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   font-size: 13px;
 }
-.odoo-chatter-feed {
+.iq-chatter-feed {
   display: flex;
   flex-direction: column;
   gap: 8px;
   max-height: 200px;
   overflow-y: auto;
 }
-.odoo-chatter-item {
+.iq-chatter-item {
   padding: 8px 10px;
   border-radius: 8px;
   background: #f8fafc;
   border-left: 3px solid #cbd5e1;
   font-size: 12.5px;
 }
-.odoo-chatter-item.comment {
+.iq-chatter-item.comment {
   background: #faf5ff;
   border-left-color: #714b67;
 }
-.odoo-chatter-meta {
+.iq-chatter-meta {
   display: flex;
   justify-content: space-between;
   font-size: 11.5px;
   color: #475569;
   margin-bottom: 3px;
 }
-.odoo-chatter-item p {
+.iq-chatter-item p {
   margin: 0;
   color: #0f172a;
 }
 
 /* Expense Submission Mode Switcher (Submit Expense vs Request from Admin) */
-.odoo-request-btn {
+.iq-request-btn {
   border-color: #d8b4fe !important;
   color: #6b21a8 !important;
   background: #faf5ff !important;
 }
-.odoo-request-btn:hover:not(:disabled) {
+.iq-request-btn:hover:not(:disabled) {
   background: #f3e8ff !important;
 }
 
-.odoo-type-switcher {
+.iq-type-switcher {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-bottom: 14px;
 }
 @media (max-width: 640px) {
-  .odoo-type-switcher {
+  .iq-type-switcher {
     grid-template-columns: 1fr;
   }
 }
-.odoo-type-tab {
+.iq-type-tab {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -2723,36 +2723,36 @@ button.danger:hover:not(:disabled) {
   color: #475569;
   transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
 }
-.odoo-type-tab:hover {
+.iq-type-tab:hover {
   border-color: #cbd5e1;
   background: #ffffff;
 }
-.odoo-type-tab.active {
+.iq-type-tab.active {
   border-color: #2563eb;
   background: #eff6ff;
   color: #1e3a8a;
   box-shadow: 0 2px 8px rgba(37, 99, 235, 0.12);
 }
-.odoo-type-tab.active.request-mode {
+.iq-type-tab.active.request-mode {
   border-color: #714b67;
   background: #faf5ff;
   color: #4c1d95;
   box-shadow: 0 2px 8px rgba(113, 75, 103, 0.14);
 }
-.odoo-type-tab strong {
+.iq-type-tab strong {
   display: block;
   font-size: 13.5px;
   line-height: 1.25;
 }
-.odoo-type-tab span {
+.iq-type-tab span {
   display: block;
   font-size: 11.5px;
   opacity: 0.85;
   margin-top: 2px;
 }
 
-.odoo-type-pill-request,
-.odoo-type-pill-expense {
+.iq-type-pill-request,
+.iq-type-pill-expense {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
@@ -2760,19 +2760,19 @@ button.danger:hover:not(:disabled) {
   padding: 2px 7px;
   border-radius: 999px;
 }
-.odoo-type-pill-request {
+.iq-type-pill-request {
   background: #fef3c7;
   color: #92400e;
   border: 1px solid #fde68a;
 }
-.odoo-type-pill-expense {
+.iq-type-pill-expense {
   background: #e0f2fe;
   color: #075985;
   border: 1px solid #bae6fd;
 }
 
-.odoo-proof-needed-pill,
-.odoo-proof-ok-pill {
+.iq-proof-needed-pill,
+.iq-proof-ok-pill {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
@@ -2780,18 +2780,18 @@ button.danger:hover:not(:disabled) {
   padding: 2px 7px;
   border-radius: 999px;
 }
-.odoo-proof-needed-pill {
+.iq-proof-needed-pill {
   background: #ffedd5;
   color: #c2410c;
   border: 1px solid #fed7aa;
 }
-.odoo-proof-ok-pill {
+.iq-proof-ok-pill {
   background: #dcfce7;
   color: #15803d;
   border: 1px solid #bbf7d0;
 }
 
-.odoo-proof-banner {
+.iq-proof-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2805,12 +2805,12 @@ button.danger:hover:not(:disabled) {
   margin-bottom: 14px;
   font-size: 12.5px;
 }
-.odoo-proof-banner strong {
+.iq-proof-banner strong {
   display: block;
   font-size: 13px;
   margin-bottom: 2px;
 }
-.odoo-proof-banner p {
+.iq-proof-banner p {
   margin: 0;
   color: #7c2d12;
 }

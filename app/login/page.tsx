@@ -204,7 +204,7 @@ export default function Login() {
               </div>
               <div className="telemetry-item">
                 <Activity size={13} />
-                <span>Odoo ERP Sync</span>
+                <span>ExpenseIQ ERP Sync</span>
               </div>
               <div className="telemetry-item">
                 <Sparkles size={13} />

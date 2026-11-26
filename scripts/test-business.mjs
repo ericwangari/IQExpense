@@ -88,7 +88,7 @@ run(owner, { action: 'deposit', amount: 30000, paymentMethod: 'paystack', refere
 assert.equal(balance(b), balanceBeforePaystack + 30000); // Idempotent check passed!
 checks++;
 
-// Odoo ERP features: VAT tax calculation, analyticAccount, reference, chatter notes, bulkReview, duplicate detection
+// ExpenseIQ ERP features: VAT tax calculation, analyticAccount, reference, chatter notes, bulkReview, duplicate detection
 run(employee, {
   action: 'submit',
   amount: 11600,
@@ -174,4 +174,4 @@ assert.equal(reqExp.receiptNumber, 'QK99887766');
 assert.ok(reqExp.proofSubmittedAt);
 checks++;
 
-console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, Odoo ERP (VAT, cost centers, chatter, bulk review), and audit.`);
+console.log(`${checks} business rule checks passed: roles, tenant isolation, approval, rejection, balances, wallet limits, duplicate protection, validation, suspension, payment deposits, ExpenseIQ ERP (VAT, cost centers, chatter, bulk review), and audit.`);
