@@ -61,24 +61,6 @@ export function LiveAuthBackground({ className = "" }: LiveAuthBackgroundProps) 
       });
     }
 
-    // Floating badges / currency nodes in the background
-    interface FloatingNode {
-      x: number;
-      y: number;
-      text: string;
-      vy: number;
-      vx: number;
-      alpha: number;
-      badgeWidth: number;
-    }
-
-    const floatingBadges: FloatingNode[] = [
-      { x: width * 0.08, y: height * 0.75, text: "KES · M-PESA STK", vy: -0.2, vx: 0.05, alpha: 0.4, badgeWidth: 120 },
-      { x: width * 0.88, y: height * 0.25, text: "CBK NPS LICENSED", vy: -0.25, vx: -0.05, alpha: 0.35, badgeWidth: 135 },
-      { x: width * 0.85, y: height * 0.82, text: "KDPA 2019 COMPLIANT", vy: -0.18, vx: -0.04, alpha: 0.35, badgeWidth: 145 },
-      { x: width * 0.05, y: height * 0.3, text: "ZERO-TRUST LEDGER", vy: -0.22, vx: 0.06, alpha: 0.38, badgeWidth: 135 },
-    ];
-
     let tick = 0;
 
     function render() {
@@ -145,48 +127,6 @@ export function LiveAuthBackground({ className = "" }: LiveAuthBackgroundProps) 
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size * 2.8, 0, Math.PI * 2);
           ctx.fill();
-        }
-      }
-
-      // 3. Render floating regulatory/fintech telemetry pills
-      if (width > 768) {
-        ctx.font = "600 10.5px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-        for (const node of floatingBadges) {
-          node.y += node.vy;
-          node.x += node.vx;
-
-          if (node.y < -40) node.y = height + 40;
-          if (node.y > height + 40) node.y = -40;
-
-          // Background pill
-          ctx.fillStyle = "rgba(15, 23, 42, 0.45)";
-          ctx.strokeStyle = `rgba(148, 163, 184, ${node.alpha * 0.7})`;
-          ctx.lineWidth = 1;
-
-          const h = 22;
-          const r = 11;
-          const w = node.badgeWidth;
-
-          ctx.beginPath();
-          if (typeof ctx.roundRect === "function") {
-            ctx.roundRect(node.x - w / 2, node.y - h / 2, w, h, r);
-          } else {
-            ctx.rect(node.x - w / 2, node.y - h / 2, w, h);
-          }
-          ctx.fill();
-          ctx.stroke();
-
-          // Green status beacon dot
-          ctx.fillStyle = "#10b981";
-          ctx.beginPath();
-          ctx.arc(node.x - w / 2 + 10, node.y, 3, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Pill text
-          ctx.fillStyle = `rgba(226, 232, 240, ${node.alpha + 0.3})`;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText(node.text, node.x + 5, node.y);
         }
       }
 
